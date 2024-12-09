@@ -21,8 +21,23 @@ impl Rectangle2D {
         }
     }
 
+    pub fn new_empty() -> Rectangle2D {
+        Rectangle2D {
+            x: f64::NAN,
+            y: f64::NAN,
+            height: f64::NAN,
+            width: f64::NAN,
+        }
+    }
+
     /// Add a point to the rectangle.
     pub fn add(&mut self, pt: &Point) {
+        if self.width.is_nan() || self.height.is_nan() {
+            self.x = pt.x;
+            self.y = pt.y;
+            self.width = 0.0;
+            self.height = 0.0;
+        }
         if pt.x < self.x {
             self.width += self.x - pt.x;
             self.x = pt.x;
@@ -140,15 +155,50 @@ mod tests {
     }
 
     #[test]
+    fn test_rectangle2d_from_empty() {
+        let mut rect = Rectangle2D::new_empty();
+        let pt = Point::new(1.0, 1.0);
+        rect.add(&pt);
+        assert_eq!(rect.x, 1.0);
+        assert_eq!(rect.y, 1.0);
+        assert_eq!(rect.width, 0.0);
+        assert_eq!(rect.height, 0.0);
+        let pt = Point::new(3., 4.);
+        rect.add(&pt);
+        assert_eq!(rect.x, 1.0);
+        assert_eq!(rect.y, 1.0);
+        assert_eq!(rect.width, 2.0);
+        assert_eq!(rect.height, 3.0);
+    }
+
+    #[test]
     fn test_as_bbox() {
         let mut rect = Rectangle2D::new(0.0, 0.0, 1.0, 1.0);
         rect.add(&Point::new(12.0, 22.0));
         rect.add(&Point::new(-3.0, -4.0));
+        assert_eq!(rect.x, -3.0);
+        assert_eq!(rect.y, -4.0);
+        assert_eq!(rect.width, 15.0);
+        assert_eq!(rect.height, 26.0);
         let bbox = rect.as_bbox();
         assert_eq!(bbox.xmin, -3.0);
         assert_eq!(bbox.ymin, -4.0);
         assert_eq!(bbox.xmax, 12.0);
         assert_eq!(bbox.ymax, 22.0);
+    }
+
+    #[test]
+    fn test_from_points() {
+        let points = vec![
+            Point::new(10.0, 10.0),
+            Point::new(1.0, 1.0),
+            Point::new(3.0, 13.0),
+        ];
+        let rect = Rectangle2D::from_points(&points);
+        assert_eq!(rect.x, 1.0);
+        assert_eq!(rect.y, 1.0);
+        assert_eq!(rect.width, 9.0);
+        assert_eq!(rect.height, 12.0);
     }
 
     #[test]

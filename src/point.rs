@@ -1,6 +1,8 @@
+use geo_types::Point as GeoPoint;
+
 /// A
 #[derive(Debug, Clone)]
-pub(crate) struct Point {
+pub struct Point {
     pub x: f64,
     pub y: f64,
 }

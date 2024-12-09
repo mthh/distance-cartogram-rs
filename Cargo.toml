@@ -1,8 +1,12 @@
 [package]
-name = "distance-cartogram-rs"
+name = "distance-cartogram"
 version = "0.1.0"
 edition = "2021"
 license = "GPL-3.0"
 authors = ["Matthieu Viry <matthieu.viry@cnrs.fr>"]
 
 [dependencies]
+geo-types = "0.7"
+
+[dev-dependencies]
+geojson = "0.24.1"

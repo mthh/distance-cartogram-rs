@@ -5,4 +5,4 @@ fast distance cartogram package for R.
 
 ### License
 
-GPL-3.O
+GPL-3.0

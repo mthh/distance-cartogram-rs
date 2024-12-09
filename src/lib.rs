@@ -5,6 +5,9 @@ mod point;
 mod rectangle;
 mod utils;
 
+pub use grid::{Grid, GridType};
+pub use point::Point;
+
 #[cfg(test)]
 mod tests {
 

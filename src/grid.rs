@@ -2,6 +2,12 @@ use crate::node::NodeSet;
 use crate::point::Point;
 use crate::rectangle::Rectangle2D;
 
+#[derive(Eq, PartialEq, Ord, PartialOrd, Debug)]
+pub enum GridType {
+    Source,
+    Interpolated,
+}
+
 /// The grid for interpolating shifting in x and y.
 ///  Based on Waldo Tobler bidimensional regression.
 pub struct Grid<'a> {
@@ -24,8 +30,17 @@ impl<'a> Grid<'a> {
 
     /// Interpolate on the grid the local transformations between the source points and images_points.
     pub fn interpolate(&mut self, image_points: &[Point], n_iter: usize) -> Vec<Point> {
-        let rect = Rectangle2D::from_points(self.points);
-        let rect_adj = Rectangle2D::from_points(image_points);
+        // let rect = Rectangle2D::from_points(self.points);
+        // let rect_adj = Rectangle2D::from_points(image_points);
+        let mut rect = Rectangle2D::new(0., 0., -1., -1.);
+        let mut rect_adj = Rectangle2D::new(0., 0., -1., -1.);
+
+        for pt in self.points {
+            rect.add(pt);
+        }
+        for pt in image_points {
+            rect_adj.add(pt);
+        }
 
         let scale_x = rect.width() / rect_adj.width();
         let scale_y = rect.height() / rect_adj.height();
@@ -149,5 +164,40 @@ impl<'a> Grid<'a> {
         let hy = vy1 / resolution * (hy1 - hy2) + hy2;
 
         Point::new(hx, hy)
+    }
+
+    /// Returns the coordinates of the grid
+    pub fn get_grid(&self, grid_type: GridType) -> Vec<Vec<Point>> {
+        let mut result = Vec::with_capacity((self.nodes.height - 1) * (self.nodes.width - 1));
+        if grid_type == GridType::Source {
+            for i in 0..(self.nodes.height - 1) {
+                for j in 0..(self.nodes.width - 1) {
+                    result.push(vec![
+                        self.nodes.get_node(i, j).source.clone(),
+                        self.nodes.get_node(i + 1, j).source.clone(),
+                        self.nodes.get_node(i + 1, j + 1).source.clone(),
+                        self.nodes.get_node(i, j + 1).source.clone(),
+                    ]);
+                }
+            }
+        } else {
+            for i in 0..(self.nodes.height - 1) {
+                for j in 0..(self.nodes.width - 1) {
+                    result.push(vec![
+                        self.nodes.get_node(i, j).interp.clone(),
+                        self.nodes.get_node(i + 1, j).interp.clone(),
+                        self.nodes.get_node(i + 1, j + 1).interp.clone(),
+                        self.nodes.get_node(i, j + 1).interp.clone(),
+                    ]);
+                }
+            }
+        }
+
+        result
+    }
+
+    /// Interpolate a layer (a collection of geo_types geometries) on the grid.
+    pub fn interpolate_layer(geometries: &[geo_types::Geometry]) {
+
     }
 }

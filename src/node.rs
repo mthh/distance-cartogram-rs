@@ -91,7 +91,7 @@ impl NodeSet {
     }
 
     fn get_i(&self, p: &Point) -> usize {
-        (self.zone.max_y() - p.y / self.resolution).round() as usize
+        ((self.zone.max_y() - p.y) / self.resolution).round() as usize
     }
 
     fn get_j(&self, p: &Point) -> usize {
