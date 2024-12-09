@@ -1,15 +1,24 @@
-use std::io::Write;
-use distance_cartogram::{Point, Grid, GridType};
+use distance_cartogram::{Grid, GridType};
+use geo_types::{Coord};
 use geojson::{Feature, FeatureCollection, GeoJson, Geometry, Value};
+use std::io::Write;
 
 pub fn main() {
     let path_source = "examples/data-source-point.geojson";
     let path_image = "examples/data-image-point.geojson";
-    let file_source = std::fs::File::open(path_source).expect("Unable to open file of image points");
+    let path_layer_to_deform = "examples/background.geojson";
+    let file_source =
+        std::fs::File::open(path_source).expect("Unable to open file of image points");
     let file_image = std::fs::File::open(path_image).expect("Unable to open file of source points");
+    let file_background =
+        std::fs::File::open(path_layer_to_deform).expect("Unable to open file of layer to deform");
 
-    let geojson_source = GeoJson::from_reader(&file_source).expect("Unable to read file of image points");
-    let geojson_image = GeoJson::from_reader(&file_image).expect("Unable to read file of source points");
+    let geojson_source =
+        GeoJson::from_reader(&file_source).expect("Unable to read file of image points");
+    let geojson_image =
+        GeoJson::from_reader(&file_image).expect("Unable to read file of source points");
+    let geojson_background =
+        GeoJson::from_reader(&file_background).expect("Unable to read file of layer to deform");
 
     let features_source = match geojson_source {
         GeoJson::FeatureCollection(collection) => collection.features,
@@ -17,6 +26,11 @@ pub fn main() {
     };
 
     let features_images = match geojson_image {
+        GeoJson::FeatureCollection(collection) => collection.features,
+        _ => panic!("Expected a feature collection"),
+    };
+
+    let features_background = match geojson_background {
         GeoJson::FeatureCollection(collection) => collection.features,
         _ => panic!("Expected a feature collection"),
     };
@@ -29,8 +43,8 @@ pub fn main() {
         let coordinates = geometry.value;
         match coordinates {
             Value::Point(point) => {
-                points_source.push(Point::new(point[0], point[1]));
-            },
+                points_source.push(Coord { x: point[0], y: point[1] });
+            }
             _ => panic!("Expected a point"),
         }
     }
@@ -40,8 +54,8 @@ pub fn main() {
         let coordinates = geometry.value;
         match coordinates {
             Value::Point(point) => {
-                points_image.push(Point::new(point[0], point[1]));
-            },
+                points_image.push(Coord { x: point[0], y: point[1] });
+            }
             _ => panic!("Expected a point"),
         }
     }
@@ -50,19 +64,67 @@ pub fn main() {
         panic!("The number of source points and image points must be the same");
     }
 
-    let mut grid = Grid::new(&points_source, 2.);
+    let bg: Vec<geo_types::Geometry> = features_background.into_iter().map(|feature_geojson| {
+        geo_types::Geometry::<f64>::try_from(feature_geojson).unwrap()
+    }).collect::<Vec<_>>();
+
+    // Compute BBox of bg
+    let mut xmin = f64::INFINITY;
+    let mut ymin = f64::INFINITY;
+    let mut xmax = f64::NEG_INFINITY;
+    let mut ymax = f64::NEG_INFINITY;
+
+    bg.iter().for_each(|f| {
+        match f {
+            geo_types::Geometry::Polygon(p) => {
+                p.exterior().0.iter().for_each(|c| {
+                    if c.x < xmin {
+                        xmin = c.x;
+                    }
+                    if c.x > xmax {
+                        xmax = c.x;
+                    }
+                    if c.y < ymin {
+                        ymin = c.y;
+                    }
+                    if c.y > ymax {
+                        ymax = c.y;
+                    }
+                });
+            }
+            geo_types::Geometry::MultiPolygon(mp) => {
+                mp.iter().for_each(|p| {
+                    p.exterior().0.iter().for_each(|c| {
+                        if c.x < xmin {
+                            xmin = c.x;
+                        }
+                        if c.x > xmax {
+                            xmax = c.x;
+                        }
+                        if c.y < ymin {
+                            ymin = c.y;
+                        }
+                        if c.y > ymax {
+                            ymax = c.y;
+                        }
+                    });
+                });
+            }
+            _ => panic!("Only Polygon and MultiPolygon are supported"),
+        }
+    });
+
+    let mut grid = Grid::new(&points_source, 1., Some((xmin, ymin, xmax, ymax).into()));
     let n_iter = (4. * (points_source.len() as f64).sqrt()).round() as usize;
     let interp_points = grid.interpolate(&points_image, n_iter);
+
+    // Get the interpolated grid
     let grid_interpolated = grid.get_grid(GridType::Interpolated);
 
     // Convert it to GeoJson
     let mut features = Vec::new();
-    for poly_coords in grid_interpolated {
-        let mut coords = Vec::new();
-        for coord in poly_coords {
-            coords.push(vec![coord.x, coord.y]);
-        }
-        let geometry = Geometry::new(Value::Polygon(vec![coords]));
+    for polygon in grid_interpolated {
+        let geometry = Geometry::new(geojson::Value::from(&polygon));
         let feature = Feature {
             bbox: None,
             geometry: Some(geometry),
@@ -80,6 +142,32 @@ pub fn main() {
         foreign_members: None,
     };
     let geojson = GeoJson::FeatureCollection(feature_collection);
-    let mut file = std::fs::File::create("examples/data-interpolated.geojson").expect("Unable to create file");
+    let mut file =
+        std::fs::File::create("examples/data-interpolated.geojson").expect("Unable to create file");
+    let _ = file.write(geojson.to_string().as_bytes());
+
+    // Transform the background layer
+    let bg_transformed = grid.interpolate_layer(&bg);
+
+    // Write the GeoJson to a file
+    let mut features = Vec::new();
+    for polygon in bg_transformed {
+        let geometry = Geometry::new(geojson::Value::from(&polygon));
+        let feature = Feature {
+            bbox: None,
+            geometry: Some(geometry),
+            id: None,
+            properties: None,
+            foreign_members: None,
+        };
+        features.push(feature);
+    }
+    let geojson = GeoJson::FeatureCollection(FeatureCollection {
+        bbox: None,
+        features,
+        foreign_members: None,
+    });
+    let mut file = std::fs::File::create("examples/data-transformed.geojson")
+        .expect("Unable to create file");
     let _ = file.write(geojson.to_string().as_bytes());
 }
