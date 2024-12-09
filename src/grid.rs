@@ -1,6 +1,8 @@
 use crate::node::NodeSet;
-use crate::point::Point;
 use crate::rectangle::Rectangle2D;
+use crate::utils::distance;
+use geo_types::Coord;
+use crate::bbox::BBox;
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub enum GridType {
@@ -11,15 +13,15 @@ pub enum GridType {
 /// The grid for interpolating shifting in x and y.
 ///  Based on Waldo Tobler bidimensional regression.
 pub struct Grid<'a> {
-    points: &'a [Point],
+    points: &'a [Coord],
     nodes: NodeSet,
 }
 
 impl<'a> Grid<'a> {
     /// Create a new grid which covers the source points and with a cell size
     /// deduced from the precision.
-    pub fn new(points: &'a [Point], precision: f64) -> Grid {
-        let mut nodes = NodeSet::new(points, precision);
+    pub fn new(points: &'a [Coord], precision: f64, bbox: Option<BBox>) -> Grid {
+        let mut nodes = NodeSet::new(points, precision, bbox);
 
         for p in points {
             nodes.set_weight_adjacent_nodes(p, 1.0);
@@ -29,7 +31,7 @@ impl<'a> Grid<'a> {
     }
 
     /// Interpolate on the grid the local transformations between the source points and images_points.
-    pub fn interpolate(&mut self, image_points: &[Point], n_iter: usize) -> Vec<Point> {
+    pub fn interpolate(&mut self, image_points: &[Coord], n_iter: usize) -> Vec<Coord> {
         // let rect = Rectangle2D::from_points(self.points);
         // let rect_adj = Rectangle2D::from_points(image_points);
         let mut rect = Rectangle2D::new(0., 0., -1., -1.);
@@ -42,15 +44,15 @@ impl<'a> Grid<'a> {
             rect_adj.add(pt);
         }
 
-        let scale_x = rect.width() / rect_adj.width();
-        let scale_y = rect.height() / rect_adj.height();
+        let scale_x = rect_adj.width() / rect.width();
+        let scale_y = rect_adj.height() / rect.height();
 
         let resolution = self.nodes.resolution;
         let width = self.nodes.width;
         let height = self.nodes.height;
         let rect_dim = width * height;
 
-        for k in 0..n_iter {
+        for _k in 0..n_iter {
             for (src_pt, adj_pt) in self.points.iter().zip(image_points) {
                 let adj_nodes = self.nodes.get_adjacent_nodes(src_pt);
                 let smoothed_nodes = [
@@ -117,7 +119,7 @@ impl<'a> Grid<'a> {
                 }
             }
 
-            let mut p_tmp = Point::new(0.0, 0.0);
+            let mut p_tmp = Coord { x: 0., y: 0. };
             for l in 0..(width * height) {
                 let mut delta = 0.0f64;
                 for i in 0..height {
@@ -130,7 +132,7 @@ impl<'a> Grid<'a> {
                             // let p = self.nodes.get_smoothed(i, j, scale_x, scale_y);
                             node.interp.x = p.x;
                             node.interp.y = p.y;
-                            delta = delta.max(p_tmp.distance(&node.interp) / rect_dim as f64);
+                            delta = delta.max(distance(&p_tmp, &node.interp) / rect_dim as f64);
                         }
                     }
                 }
@@ -147,7 +149,7 @@ impl<'a> Grid<'a> {
     }
 
     /// Interpolate the point src_point on the transformed grid
-    pub fn get_interp_point(&self, src_point: &Point) -> Point {
+    pub fn get_interp_point(&self, src_point: &Coord) -> Coord {
         let adj_nodes = self.nodes.get_adjacent_nodes(src_point);
         let resolution = self.nodes.resolution;
         let ux1 = src_point.x - adj_nodes[0].source.x;
@@ -163,32 +165,40 @@ impl<'a> Grid<'a> {
             + adj_nodes[2].interp.y;
         let hy = vy1 / resolution * (hy1 - hy2) + hy2;
 
-        Point::new(hx, hy)
+        Coord { x: hx, y: hy }
     }
 
     /// Returns the coordinates of the grid
-    pub fn get_grid(&self, grid_type: GridType) -> Vec<Vec<Point>> {
+    pub fn get_grid(&self, grid_type: GridType) -> Vec<geo_types::Polygon> {
         let mut result = Vec::with_capacity((self.nodes.height - 1) * (self.nodes.width - 1));
         if grid_type == GridType::Source {
             for i in 0..(self.nodes.height - 1) {
                 for j in 0..(self.nodes.width - 1) {
-                    result.push(vec![
-                        self.nodes.get_node(i, j).source.clone(),
-                        self.nodes.get_node(i + 1, j).source.clone(),
-                        self.nodes.get_node(i + 1, j + 1).source.clone(),
-                        self.nodes.get_node(i, j + 1).source.clone(),
-                    ]);
+                    result.push(geo_types::Polygon::new(
+                        vec![
+                            self.nodes.get_node(i, j).source.clone(),
+                            self.nodes.get_node(i + 1, j).source.clone(),
+                            self.nodes.get_node(i + 1, j + 1).source.clone(),
+                            self.nodes.get_node(i, j + 1).source.clone(),
+                        ]
+                        .into(),
+                        vec![],
+                    ));
                 }
             }
         } else {
             for i in 0..(self.nodes.height - 1) {
                 for j in 0..(self.nodes.width - 1) {
-                    result.push(vec![
-                        self.nodes.get_node(i, j).interp.clone(),
-                        self.nodes.get_node(i + 1, j).interp.clone(),
-                        self.nodes.get_node(i + 1, j + 1).interp.clone(),
-                        self.nodes.get_node(i, j + 1).interp.clone(),
-                    ]);
+                    result.push(geo_types::Polygon::new(
+                        vec![
+                            self.nodes.get_node(i, j).interp.clone(),
+                            self.nodes.get_node(i + 1, j).interp.clone(),
+                            self.nodes.get_node(i + 1, j + 1).interp.clone(),
+                            self.nodes.get_node(i, j + 1).interp.clone(),
+                        ]
+                        .into(),
+                        vec![],
+                    ));
                 }
             }
         }
@@ -196,8 +206,113 @@ impl<'a> Grid<'a> {
         result
     }
 
-    /// Interpolate a layer (a collection of geo_types geometries) on the grid.
-    pub fn interpolate_layer(geometries: &[geo_types::Geometry]) {
+    /// Interpolate a collection of geo_types geometries on the interpolation grid.
+    pub fn interpolate_layer(
+        &self,
+        geometries: &[geo_types::Geometry],
+    ) -> Vec<geo_types::Geometry> {
+        let mut result = Vec::with_capacity(geometries.len());
+        for geom in geometries {
+            match geom {
+                geo_types::Geometry::Point(p) => {
+                    result.push(geo_types::Geometry::Point(geo_types::Point(
+                        self.get_interp_point(&p.0),
+                    )));
+                }
+                geo_types::Geometry::MultiPoint(mp) => {
+                    let mut multi_point: Vec<geo_types::Point> = Vec::with_capacity(mp.len());
+                    for p in mp.iter() {
+                        multi_point.push(self.get_interp_point(&p.0).into());
+                    }
+                    result.push(geo_types::Geometry::MultiPoint(geo_types::MultiPoint(
+                        multi_point,
+                    )));
+                }
+                geo_types::Geometry::LineString(ls) => {
+                    let mut line = Vec::with_capacity(ls.0.len());
+                    for p in ls.0.iter() {
+                        line.push(self.get_interp_point(&p));
+                    }
+                    result.push(geo_types::Geometry::LineString(geo_types::LineString(line)));
+                }
+                geo_types::Geometry::MultiLineString(mls) => {
+                    let mut multi_line = Vec::with_capacity(mls.0.len());
+                    for ls in mls.iter() {
+                        let mut line = Vec::with_capacity(ls.0.len());
+                        for p in ls.0.iter() {
+                            line.push(self.get_interp_point(&p));
+                        }
+                        multi_line.push(geo_types::LineString(line));
+                    }
+                    result.push(geo_types::Geometry::MultiLineString(
+                        geo_types::MultiLineString(multi_line),
+                    ));
+                }
+                geo_types::Geometry::Polygon(poly) => {
+                    let mut exterior = Vec::with_capacity(poly.exterior().0.len());
+                    for p in poly.exterior().0.iter() {
+                        exterior.push(self.get_interp_point(&p));
+                    }
+                    let mut interiors = Vec::with_capacity(poly.interiors().len());
+                    for interior in poly.interiors() {
+                        let mut interior_points = Vec::with_capacity(interior.0.len());
+                        for p in interior.0.iter() {
+                            interior_points.push(self.get_interp_point(&p));
+                        }
+                        interiors.push(geo_types::LineString(interior_points));
+                    }
+                    result.push(geo_types::Geometry::Polygon(geo_types::Polygon::new(
+                        exterior.into(), interiors.into(),
+                    )));
+                }
+                geo_types::Geometry::MultiPolygon(mpoly) => {
+                    let mut multi_polygon = Vec::with_capacity(mpoly.0.len());
+                    for poly in mpoly.iter() {
+                        let mut exterior = Vec::with_capacity(poly.exterior().0.len());
+                        for p in poly.exterior().0.iter() {
+                            exterior.push(self.get_interp_point(&p));
+                        }
+                        let mut interiors = Vec::with_capacity(poly.interiors().len());
+                        for interior in poly.interiors() {
+                            let mut interior_points = Vec::with_capacity(interior.0.len());
+                            for p in interior.0.iter() {
+                                interior_points.push(self.get_interp_point(&p));
+                            }
+                            interiors.push(geo_types::LineString(interior_points));
+                        }
+                        multi_polygon.push(geo_types::Polygon::new(exterior.into(), interiors.into()));
+                    }
+                    result.push(geo_types::Geometry::MultiPolygon(geo_types::MultiPolygon(
+                        multi_polygon,
+                    )));
+                }
+                geo_types::Geometry::GeometryCollection(geometries) => {
+                    result = self.interpolate_layer(&geometries.0);
+                }
+                geo_types::Geometry::Line(l) => {
+                    let p1 = self.get_interp_point(&l.start);
+                    let p2 = self.get_interp_point(&l.end);
+                    result.push(geo_types::Geometry::Line(geo_types::Line {
+                        start: p1,
+                        end: p2,
+                    }));
+                }
+                geo_types::Geometry::Triangle(tri) => {
+                    let v1 = self.get_interp_point(&tri.0);
+                    let v2 = self.get_interp_point(&tri.1);
+                    let v3 = self.get_interp_point(&tri.2);
+                    result.push(geo_types::Geometry::Triangle(geo_types::Triangle(
+                        v1, v2, v3,
+                    )));
+                }
+                geo_types::Geometry::Rect(r) => {
+                    let min = self.get_interp_point(&r.min());
+                    let max = self.get_interp_point(&r.max());
+                    result.push(geo_types::Geometry::Rect(geo_types::Rect::new(min, max)));
+                }
+            }
+        }
 
+        result
     }
 }

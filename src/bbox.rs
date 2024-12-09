@@ -1,5 +1,5 @@
 #[derive(Debug)]
-pub(crate) struct BBox {
+pub struct BBox {
     pub xmin: f64,
     pub ymin: f64,
     pub xmax: f64,

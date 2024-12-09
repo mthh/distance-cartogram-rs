@@ -1,5 +1,6 @@
-use crate::point::Point;
 use crate::rectangle::Rectangle2D;
+use geo_types::Coord;
+use crate::bbox::BBox;
 
 /// A node in the grid.
 #[derive(Debug, Clone)]
@@ -8,13 +9,13 @@ pub(crate) struct Node {
     pub i: usize,
     /// Position on the grid (column)
     pub j: usize,
-    pub source: Point,
-    pub interp: Point,
+    pub source: Coord,
+    pub interp: Coord,
     pub weight: f64,
 }
 
 impl Node {
-    pub fn new(i: usize, j: usize, source: Point) -> Node {
+    pub fn new(i: usize, j: usize, source: Coord) -> Node {
         Node {
             i,
             j,
@@ -40,8 +41,12 @@ pub(crate) struct NodeSet {
 }
 
 impl NodeSet {
-    pub fn new(points: &[Point], precision: f64) -> NodeSet {
-        let mut zone = Rectangle2D::from_points(points);
+    pub fn new(points: &[Coord], precision: f64, bbox: Option<BBox>) -> NodeSet {
+        let mut zone = if bbox.is_none() {
+            Rectangle2D::from_points(points)
+        } else {
+            Rectangle2D::from_bbox(&bbox.unwrap())
+        };
         let resolution =
             1. / precision * (zone.width() * zone.height() / points.len() as f64).sqrt();
 
@@ -52,8 +57,14 @@ impl NodeSet {
         let dy = height as f64 * resolution - zone.height();
 
         zone.set_rect_from_center(
-            &Point::new(zone.center_x(), zone.center_y()),
-            &Point::new(zone.min_x() - dx / 2., zone.min_y() - dy / 2.),
+            &Coord {
+                x: zone.center_x(),
+                y: zone.center_y(),
+            },
+            &Coord {
+                x: zone.min_x() - dx / 2.,
+                y: zone.min_y() - dy / 2.,
+            },
         );
 
         width += 1;
@@ -68,7 +79,10 @@ impl NodeSet {
                 nodes.push(Node::new(
                     i,
                     j,
-                    Point::new(min_x + j as f64 * resolution, max_y - i as f64 * resolution),
+                    Coord {
+                        x: min_x + j as f64 * resolution,
+                        y: max_y - i as f64 * resolution,
+                    },
                 ));
             }
         }
@@ -90,15 +104,15 @@ impl NodeSet {
         &mut self.nodes[i * self.width + j]
     }
 
-    fn get_i(&self, p: &Point) -> usize {
+    fn get_i(&self, p: &Coord) -> usize {
         ((self.zone.max_y() - p.y) / self.resolution).round() as usize
     }
 
-    fn get_j(&self, p: &Point) -> usize {
+    fn get_j(&self, p: &Coord) -> usize {
         ((p.x - self.zone.min_x()) / self.resolution).round() as usize
     }
 
-    pub fn get_adjacent_nodes(&self, point: &Point) -> [Node; 4] {
+    pub fn get_adjacent_nodes(&self, point: &Coord) -> [Node; 4] {
         let i = self.get_i(point);
         let j = self.get_j(point);
         [
@@ -109,7 +123,7 @@ impl NodeSet {
         ]
     }
 
-    pub fn update_adjacent_node<F>(&mut self, point: &Point, i: usize, mut f: F)
+    pub fn update_adjacent_node<F>(&mut self, point: &Coord, i: usize, mut f: F)
     where
         F: FnMut(&mut Node),
     {
@@ -126,7 +140,7 @@ impl NodeSet {
         f(node);
     }
 
-    pub fn set_weight_adjacent_nodes(&mut self, point: &Point, value: f64) {
+    pub fn set_weight_adjacent_nodes(&mut self, point: &Coord, value: f64) {
         let i = self.get_i(point);
         let j = self.get_j(point);
         let n1 = self.get_mut_node(i, j);
@@ -139,30 +153,30 @@ impl NodeSet {
         n4.weight += value;
     }
 
-    pub fn get_smoothed(&self, i: usize, j: usize, scale_x: f64, scale_y: f64) -> Point {
+    pub fn get_smoothed(&self, i: usize, j: usize, scale_x: f64, scale_y: f64) -> Coord {
         if i > 1 && j > 1 && i < self.height - 2 && j < self.width - 2 {
-            let a = &self.get_node(i - 1, j).interp;
-            let b = &self.get_node(i + 1, j).interp;
-            let c = &self.get_node(i, j - 1).interp;
-            let d = &self.get_node(i, j + 1).interp;
-            let e = &self.get_node(i - 1, j - 1).interp;
-            let f = &self.get_node(i + 1, j - 1).interp;
-            let g = &self.get_node(i + 1, j + 1).interp;
-            let h = &self.get_node(i - 1, j + 1).interp;
-            let _i = &self.get_node(i - 2, j).interp;
-            let _j = &self.get_node(i + 2, j).interp;
-            let k = &self.get_node(i, j - 2).interp;
-            let _l = &self.get_node(i, j + 2).interp;
-            Point::new(
-                (8. * (a.x + b.x + c.x + d.x)
-                    - 2. * (e.x + f.x + g.x + h.x)
-                    - (_i.x + _j.x + k.x + _l.x))
+            let pa = &self.get_node(i - 1, j).interp;
+            let pb = &self.get_node(i + 1, j).interp;
+            let pc = &self.get_node(i, j - 1).interp;
+            let pd = &self.get_node(i, j + 1).interp;
+            let pe = &self.get_node(i - 1, j - 1).interp;
+            let pf = &self.get_node(i + 1, j - 1).interp;
+            let pg = &self.get_node(i + 1, j + 1).interp;
+            let ph = &self.get_node(i - 1, j + 1).interp;
+            let pi = &self.get_node(i - 2, j).interp;
+            let pj = &self.get_node(i + 2, j).interp;
+            let pk = &self.get_node(i, j - 2).interp;
+            let pl = &self.get_node(i, j + 2).interp;
+            Coord {
+                x: (8. * (pa.x + pb.x + pc.x + pd.x)
+                    - 2. * (pe.x + pf.x + pg.x + ph.x)
+                    - (pi.x + pj.x + pk.x + pl.x))
                     / 20.,
-                (8. * (a.y + b.y + c.y + d.y)
-                    - 2. * (e.y + f.y + g.y + h.y)
-                    - (_i.y + _j.y + k.y + _l.y))
+                y: (8. * (pa.y + pb.y + pc.y + pd.y)
+                    - 2. * (pe.y + pf.y + pg.y + ph.y)
+                    - (pi.y + pj.y + pk.y + pl.y))
                     / 20.,
-            )
+            }
         } else {
             let mut nb = 0;
             let mut sx = 0.;
@@ -199,7 +213,10 @@ impl NodeSet {
             } else {
                 sx += self.resolution * scale_x;
             }
-            Point::new(sx / nb as f64, sy / nb as f64)
+            Coord {
+                x: sx / nb as f64,
+                y: sy / nb as f64,
+            }
         }
     }
 }

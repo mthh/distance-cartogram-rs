@@ -1,5 +1,5 @@
 use crate::bbox::BBox;
-use crate::point::Point;
+use geo_types::Coord;
 
 /// A 2D rectangle, defined by a point (x, y) and dimension (width x height).
 #[derive(Debug)]
@@ -31,7 +31,7 @@ impl Rectangle2D {
     }
 
     /// Add a point to the rectangle.
-    pub fn add(&mut self, pt: &Point) {
+    pub fn add(&mut self, pt: &Coord) {
         if self.width.is_nan() || self.height.is_nan() {
             self.x = pt.x;
             self.y = pt.y;
@@ -53,7 +53,7 @@ impl Rectangle2D {
     }
 
     /// Update the rectangle from a center and a corner.
-    pub fn set_rect_from_center(&mut self, center: &Point, corner: &Point) {
+    pub fn set_rect_from_center(&mut self, center: &Coord, corner: &Coord) {
         self.x = center.x - (corner.x - center.x).abs();
         self.y = center.y - (corner.y - center.y).abs();
         self.width = (corner.x - center.x).abs() * 2.0;
@@ -101,7 +101,7 @@ impl Rectangle2D {
     }
 
     /// Create a Rectangle2D from a list of points.
-    pub fn from_points(points: &[Point]) -> Rectangle2D {
+    pub fn from_points(points: &[Coord]) -> Rectangle2D {
         if points.is_empty() {
             return Rectangle2D::new(0.0, 0.0, 0.0, 0.0);
         }
@@ -136,17 +136,17 @@ impl Rectangle2D {
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    use geo_types::Coord;
     #[test]
     fn test_rectangle2d() {
         let mut rect = Rectangle2D::new(0.0, 0.0, 0.0, 0.0);
-        let pt = Point::new(1.0, 1.0);
+        let pt = Coord { x: 1.0, y: 1.0 };
         rect.add(&pt);
         assert_eq!(rect.x, 0.0);
         assert_eq!(rect.y, 0.0);
         assert_eq!(rect.width, 1.0);
         assert_eq!(rect.height, 1.0);
-        let pt = Point::new(-1.0, -1.0);
+        let pt = Coord { x: -1.0, y: -1.0 };
         rect.add(&pt);
         assert_eq!(rect.x, -1.0);
         assert_eq!(rect.y, -1.0);
@@ -157,13 +157,13 @@ mod tests {
     #[test]
     fn test_rectangle2d_from_empty() {
         let mut rect = Rectangle2D::new_empty();
-        let pt = Point::new(1.0, 1.0);
+        let pt = Coord { x: 1.0, y: 1.0 };
         rect.add(&pt);
         assert_eq!(rect.x, 1.0);
         assert_eq!(rect.y, 1.0);
         assert_eq!(rect.width, 0.0);
         assert_eq!(rect.height, 0.0);
-        let pt = Point::new(3., 4.);
+        let pt = Coord { x: 3., y: 4. };
         rect.add(&pt);
         assert_eq!(rect.x, 1.0);
         assert_eq!(rect.y, 1.0);
@@ -174,8 +174,8 @@ mod tests {
     #[test]
     fn test_as_bbox() {
         let mut rect = Rectangle2D::new(0.0, 0.0, 1.0, 1.0);
-        rect.add(&Point::new(12.0, 22.0));
-        rect.add(&Point::new(-3.0, -4.0));
+        rect.add(&Coord { x: 12.0, y: 22.0 });
+        rect.add(&Coord { x: -3.0, y: -4.0 });
         assert_eq!(rect.x, -3.0);
         assert_eq!(rect.y, -4.0);
         assert_eq!(rect.width, 15.0);
@@ -190,9 +190,9 @@ mod tests {
     #[test]
     fn test_from_points() {
         let points = vec![
-            Point::new(10.0, 10.0),
-            Point::new(1.0, 1.0),
-            Point::new(3.0, 13.0),
+            Coord { x: 1.0, y: 1.0 },
+            Coord { x: 10.0, y: 1.0 },
+            Coord { x: 10.0, y: 13.0 },
         ];
         let rect = Rectangle2D::from_points(&points);
         assert_eq!(rect.x, 1.0);
