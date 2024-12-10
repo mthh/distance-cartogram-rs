@@ -4,8 +4,8 @@ mod node;
 mod rectangle;
 mod utils;
 
-pub use grid::{Grid, GridType};
 pub use bbox::BBox;
+pub use grid::{Grid, GridType};
 
 #[cfg(test)]
 mod tests {

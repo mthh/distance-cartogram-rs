@@ -1,6 +1,6 @@
+use crate::bbox::BBox;
 use crate::rectangle::Rectangle2D;
 use geo_types::Coord;
-use crate::bbox::BBox;
 
 /// A node in the grid.
 #[derive(Debug, Clone)]

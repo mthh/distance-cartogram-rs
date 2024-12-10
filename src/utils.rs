@@ -10,6 +10,6 @@ pub(crate) fn get_bbox(points: &[Coord]) -> BBox {
     rect.as_bbox()
 }
 
-pub(crate) fn distance(p1: &Coord, p2: &Coord) -> f64 {
-    ((p1.x - p2.x).powi(2) + (p1.y - p2.y).powi(2)).sqrt()
+pub(crate) fn distance_sq(p1: &Coord, p2: &Coord) -> f64 {
+    (p1.x - p2.x).powi(2) + (p1.y - p2.y).powi(2)
 }

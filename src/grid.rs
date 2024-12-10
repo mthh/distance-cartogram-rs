@@ -1,8 +1,8 @@
+use crate::bbox::BBox;
 use crate::node::NodeSet;
 use crate::rectangle::Rectangle2D;
-use crate::utils::distance;
+use crate::utils::distance_sq;
 use geo_types::Coord;
-use crate::bbox::BBox;
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub enum GridType {
@@ -132,7 +132,7 @@ impl<'a> Grid<'a> {
                             // let p = self.nodes.get_smoothed(i, j, scale_x, scale_y);
                             node.interp.x = p.x;
                             node.interp.y = p.y;
-                            delta = delta.max(distance(&p_tmp, &node.interp) / rect_dim as f64);
+                            delta = delta.max(distance_sq(&p_tmp, &node.interp) / rect_dim as f64);
                         }
                     }
                 }
@@ -262,7 +262,8 @@ impl<'a> Grid<'a> {
                         interiors.push(geo_types::LineString(interior_points));
                     }
                     result.push(geo_types::Geometry::Polygon(geo_types::Polygon::new(
-                        exterior.into(), interiors.into(),
+                        exterior.into(),
+                        interiors.into(),
                     )));
                 }
                 geo_types::Geometry::MultiPolygon(mpoly) => {
@@ -280,7 +281,8 @@ impl<'a> Grid<'a> {
                             }
                             interiors.push(geo_types::LineString(interior_points));
                         }
-                        multi_polygon.push(geo_types::Polygon::new(exterior.into(), interiors.into()));
+                        multi_polygon
+                            .push(geo_types::Polygon::new(exterior.into(), interiors.into()));
                     }
                     result.push(geo_types::Geometry::MultiPolygon(geo_types::MultiPolygon(
                         multi_polygon,
