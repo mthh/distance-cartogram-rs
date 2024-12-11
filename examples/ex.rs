@@ -1,7 +1,31 @@
-use distance_cartogram::{Grid, GridType};
+use distance_cartogram::{Grid, GridType, get_nb_iterations};
 use geo_types::Coord;
 use geojson::{Feature, FeatureCollection, GeoJson, Geometry, Value};
 use std::io::Write;
+
+fn prepare_grid_geojson(grid: &Grid, grid_type: GridType, foreign_members: Option<geojson::JsonObject>) -> GeoJson {
+    let mut features = Vec::new();
+    for (i, polygon) in grid.get_grid(grid_type).iter().enumerate() {
+        let geometry = Geometry::new(geojson::Value::from(polygon));
+        let mut props = geojson::JsonObject::new();
+        props.insert("id".to_string(), i.into());
+        let feature = Feature {
+            bbox: None,
+            geometry: Some(geometry),
+            id: None,
+            properties: Some(props),
+            foreign_members: None,
+        };
+        features.push(feature);
+    }
+
+    let feature_collection = FeatureCollection {
+        bbox: None,
+        features,
+        foreign_members,
+    };
+    GeoJson::FeatureCollection(feature_collection)
+}
 
 pub fn main() {
     let path_source = "examples/data-source-point.geojson";
@@ -85,126 +109,68 @@ pub fn main() {
         panic!("The number of source points and image points must be the same");
     }
 
+    // Extract properties and geometries from the background layer
+    let mut props_bg_layer = Vec::with_capacity(features_background.len());
     let bg: Vec<geo_types::Geometry> = features_background
         .into_iter()
-        .map(|feature_geojson| geo_types::Geometry::<f64>::try_from(feature_geojson).unwrap())
+        .map(|feature_geojson| {
+            props_bg_layer.push(feature_geojson.properties.clone());
+            return geo_types::Geometry::<f64>::try_from(feature_geojson).unwrap();
+        })
         .collect::<Vec<_>>();
 
-    // Compute BBox of bg
+    // Compute BBox of background layer
     let mut xmin = f64::INFINITY;
     let mut ymin = f64::INFINITY;
     let mut xmax = f64::NEG_INFINITY;
     let mut ymax = f64::NEG_INFINITY;
 
+    let box_coord = |c| {
+        if c.x < xmin {
+            xmin = c.x;
+        }
+        if c.x > xmax {
+            xmax = c.x;
+        }
+        if c.y < ymin {
+            ymin = c.y;
+        }
+        if c.y > ymax {
+            ymax = c.y;
+        }
+    };
+
     bg.iter().for_each(|f| match f {
         geo_types::Geometry::Polygon(p) => {
-            p.exterior().0.iter().for_each(|c| {
-                if c.x < xmin {
-                    xmin = c.x;
-                }
-                if c.x > xmax {
-                    xmax = c.x;
-                }
-                if c.y < ymin {
-                    ymin = c.y;
-                }
-                if c.y > ymax {
-                    ymax = c.y;
-                }
-            });
+            p.exterior().0.iter().for_each(box_coord);
         }
         geo_types::Geometry::MultiPolygon(mp) => {
             mp.iter().for_each(|p| {
-                p.exterior().0.iter().for_each(|c| {
-                    if c.x < xmin {
-                        xmin = c.x;
-                    }
-                    if c.x > xmax {
-                        xmax = c.x;
-                    }
-                    if c.y < ymin {
-                        ymin = c.y;
-                    }
-                    if c.y > ymax {
-                        ymax = c.y;
-                    }
-                });
+                p.exterior().0.iter().for_each(box_coord);
             });
         }
-        _ => panic!("Only Polygon and MultiPolygon are supported"),
+        _ => panic!("Only Polygon and MultiPolygon are supported for now"),
     });
 
+    // How much iterations to perform
+    let n_iter = get_nb_iterations(points_source.len());
+
+    // Actual grid computation
     let mut grid = Grid::new(&points_source, 2., Some((xmin, ymin, xmax, ymax).into()));
-    let n_iter = (4. * (points_source.len() as f64).sqrt()).round() as usize;
-    let interp_points = grid.interpolate(&points_image, n_iter);
-
-    // Get the source grid
-    let grid_source = grid.get_grid(GridType::Source);
-
-    // Get the interpolated grid
-    let grid_interpolated = grid.get_grid(GridType::Interpolated);
-
-    let mut features = Vec::new();
-    for polygon in grid_source {
-        let geometry = Geometry::new(geojson::Value::from(&polygon));
-        let feature = Feature {
-            bbox: None,
-            geometry: Some(geometry),
-            id: None,
-            properties: None,
-            foreign_members: None,
-        };
-        features.push(feature);
-    }
-
-    // Write the GeoJson to a file
-    let feature_collection = FeatureCollection {
-        bbox: None,
-        features,
-        foreign_members: Some(fm.clone()),
-    };
-    let geojson = GeoJson::FeatureCollection(feature_collection);
-    let mut file =
-        std::fs::File::create("examples/grid-source.geojson").expect("Unable to create file");
-    let _ = file.write(geojson.to_string().as_bytes());
-
-    // Convert interpolated grid to GeoJson
-    let mut features = Vec::new();
-    for polygon in grid_interpolated {
-        let geometry = Geometry::new(geojson::Value::from(&polygon));
-        let feature = Feature {
-            bbox: None,
-            geometry: Some(geometry),
-            id: None,
-            properties: None,
-            foreign_members: None,
-        };
-        features.push(feature);
-    }
-
-    // Write the GeoJson to a file
-    let feature_collection = FeatureCollection {
-        bbox: None,
-        features,
-        foreign_members: Some(fm.clone()),
-    };
-    let geojson = GeoJson::FeatureCollection(feature_collection);
-    let mut file =
-        std::fs::File::create("examples/grid-interpolated.geojson").expect("Unable to create file");
-    let _ = file.write(geojson.to_string().as_bytes());
+    grid.interpolate(&points_image, n_iter);
 
     // Transform the background layer
     let bg_transformed = grid.interpolate_layer(&bg);
 
-    // Write the GeoJson to a file
+    // Write the GeoJson to a file, taking care to transferring the original properties
     let mut features = Vec::new();
-    for polygon in bg_transformed {
+    for (polygon, props) in bg_transformed.iter().zip(props_bg_layer.into_iter()) {
         let geometry = Geometry::new(geojson::Value::from(&polygon));
         let feature = Feature {
             bbox: None,
             geometry: Some(geometry),
             id: None,
-            properties: None,
+            properties: props,
             foreign_members: None,
         };
         features.push(feature);
@@ -217,4 +183,17 @@ pub fn main() {
     let mut file =
         std::fs::File::create("examples/data-transformed.geojson").expect("Unable to create file");
     let _ = file.write(geojson.to_string().as_bytes());
+
+    // Get the source grid and the interpolated grid...
+    let grid_source = prepare_grid_geojson(&grid, GridType::Source, Some(fm.clone()));
+    let grid_interpolated = prepare_grid_geojson(&grid, GridType::Interpolated, Some(fm.clone()));
+
+    // ... and save them to files for latter visualization
+    let mut file =
+        std::fs::File::create("examples/grid-source.geojson").expect("Unable to create file");
+    file.write(grid_source.to_string().as_bytes());
+
+    let mut file =
+        std::fs::File::create("examples/grid-interpolated.geojson").expect("Unable to create file");
+    file.write(grid_interpolated.to_string().as_bytes());
 }
