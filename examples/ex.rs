@@ -1,9 +1,13 @@
-use distance_cartogram::{Grid, GridType, get_nb_iterations};
+use distance_cartogram::{get_nb_iterations, Grid, GridType};
 use geo_types::Coord;
 use geojson::{Feature, FeatureCollection, GeoJson, Geometry, Value};
 use std::io::Write;
 
-fn prepare_grid_geojson(grid: &Grid, grid_type: GridType, foreign_members: Option<geojson::JsonObject>) -> GeoJson {
+fn prepare_grid_geojson(
+    grid: &Grid,
+    grid_type: GridType,
+    foreign_members: Option<geojson::JsonObject>,
+) -> GeoJson {
     let mut features = Vec::new();
     for (i, polygon) in grid.get_grid(grid_type).iter().enumerate() {
         let geometry = Geometry::new(geojson::Value::from(polygon));
@@ -57,8 +61,9 @@ pub fn main() {
 
     // We want to read the foreign members of the GeoJson FeatureCollection
     let crs_background = match &geojson_background {
-        GeoJson::FeatureCollection(collection) => (*collection)
-            .foreign_members.as_ref()
+        GeoJson::FeatureCollection(collection) => collection
+            .foreign_members
+            .as_ref()
             .expect("No foreign members found")
             .get("crs")
             .expect("No crs found")
@@ -115,7 +120,7 @@ pub fn main() {
         .into_iter()
         .map(|feature_geojson| {
             props_bg_layer.push(feature_geojson.properties.clone());
-            return geo_types::Geometry::<f64>::try_from(feature_geojson).unwrap();
+            geo_types::Geometry::<f64>::try_from(feature_geojson).unwrap()
         })
         .collect::<Vec<_>>();
 
@@ -142,11 +147,11 @@ pub fn main() {
 
     bg.iter().for_each(|f| match f {
         geo_types::Geometry::Polygon(p) => {
-            p.exterior().0.iter().for_each(|c| box_coord(c));
+            p.exterior().0.iter().for_each(&mut box_coord);
         }
         geo_types::Geometry::MultiPolygon(mp) => {
             mp.iter().for_each(|p| {
-                p.exterior().0.iter().for_each(|c| box_coord(c));
+                p.exterior().0.iter().for_each(&mut box_coord);
             });
         }
         _ => panic!("Only Polygon and MultiPolygon are supported for now"),

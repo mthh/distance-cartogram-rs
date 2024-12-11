@@ -174,10 +174,10 @@ impl<'a> Grid<'a> {
                 for j in 0..(self.nodes.width - 1) {
                     result.push(geo_types::Polygon::new(
                         vec![
-                            self.nodes.get_node(i, j).source.clone(),
-                            self.nodes.get_node(i + 1, j).source.clone(),
-                            self.nodes.get_node(i + 1, j + 1).source.clone(),
-                            self.nodes.get_node(i, j + 1).source.clone(),
+                            self.nodes.get_node(i, j).source,
+                            self.nodes.get_node(i + 1, j).source,
+                            self.nodes.get_node(i + 1, j + 1).source,
+                            self.nodes.get_node(i, j + 1).source,
                         ]
                         .into(),
                         vec![],
@@ -189,10 +189,10 @@ impl<'a> Grid<'a> {
                 for j in 0..(self.nodes.width - 1) {
                     result.push(geo_types::Polygon::new(
                         vec![
-                            self.nodes.get_node(i, j).interp.clone(),
-                            self.nodes.get_node(i + 1, j).interp.clone(),
-                            self.nodes.get_node(i + 1, j + 1).interp.clone(),
-                            self.nodes.get_node(i, j + 1).interp.clone(),
+                            self.nodes.get_node(i, j).interp,
+                            self.nodes.get_node(i + 1, j).interp,
+                            self.nodes.get_node(i + 1, j + 1).interp,
+                            self.nodes.get_node(i, j + 1).interp,
                         ]
                         .into(),
                         vec![],
@@ -206,7 +206,11 @@ impl<'a> Grid<'a> {
 
     fn get_diff(&self, i: usize, j: usize) -> [f64; 4] {
         let mut diff = [0.; 4];
-        let n = if self.nodes.is_in_grid(i, j) { Some(self.nodes.get_node(i, j)) } else { None };
+        let n = if self.nodes.is_in_grid(i, j) {
+            Some(self.nodes.get_node(i, j))
+        } else {
+            None
+        };
         let ny1 = if self.nodes.is_in_grid(i - 1, j) {
             Some(self.nodes.get_node(i - 1, j))
         } else {
@@ -234,8 +238,10 @@ impl<'a> Grid<'a> {
             diff[0] = (n.unwrap().interp.x - nx1.unwrap().interp.x) / self.nodes.resolution;
             diff[1] = (n.unwrap().interp.y - nx1.unwrap().interp.y) / self.nodes.resolution;
         } else {
-            diff[0] = (nx2.unwrap().interp.x - nx1.unwrap().interp.x) / (2. * self.nodes.resolution);
-            diff[1] = (nx2.unwrap().interp.y - nx1.unwrap().interp.y) / (2. * self.nodes.resolution);
+            diff[0] =
+                (nx2.unwrap().interp.x - nx1.unwrap().interp.x) / (2. * self.nodes.resolution);
+            diff[1] =
+                (nx2.unwrap().interp.y - nx1.unwrap().interp.y) / (2. * self.nodes.resolution);
         }
 
         if ny1.is_none() {
@@ -245,8 +251,10 @@ impl<'a> Grid<'a> {
             diff[2] = (ny1.unwrap().interp.x - n.unwrap().interp.x) / self.nodes.resolution;
             diff[3] = (ny1.unwrap().interp.y - n.unwrap().interp.y) / self.nodes.resolution;
         } else {
-            diff[2] = (ny1.unwrap().interp.x - ny2.unwrap().interp.x) / (2. * self.nodes.resolution);
-            diff[3] = (ny1.unwrap().interp.y - ny2.unwrap().interp.y) / (2. * self.nodes.resolution);
+            diff[2] =
+                (ny1.unwrap().interp.x - ny2.unwrap().interp.x) / (2. * self.nodes.resolution);
+            diff[3] =
+                (ny1.unwrap().interp.y - ny2.unwrap().interp.y) / (2. * self.nodes.resolution);
         }
         diff
     }
@@ -259,7 +267,8 @@ impl<'a> Grid<'a> {
 
     /// The average deformation strength for the grid
     pub fn deformation_strength(&self) -> f64 {
-        (self.sum_squared_deformation_strength() / (self.nodes.width * self.nodes.height) as f64).sqrt()
+        (self.sum_squared_deformation_strength() / (self.nodes.width * self.nodes.height) as f64)
+            .sqrt()
     }
 
     /// The sum of squared deformation strength for the grid
@@ -299,7 +308,7 @@ impl<'a> Grid<'a> {
                 geo_types::Geometry::LineString(ls) => {
                     let mut line = Vec::with_capacity(ls.0.len());
                     for p in ls.0.iter() {
-                        line.push(self.get_interp_point(&p));
+                        line.push(self.get_interp_point(p));
                     }
                     result.push(geo_types::Geometry::LineString(geo_types::LineString(line)));
                 }
@@ -308,7 +317,7 @@ impl<'a> Grid<'a> {
                     for ls in mls.iter() {
                         let mut line = Vec::with_capacity(ls.0.len());
                         for p in ls.0.iter() {
-                            line.push(self.get_interp_point(&p));
+                            line.push(self.get_interp_point(p));
                         }
                         multi_line.push(geo_types::LineString(line));
                     }
@@ -319,19 +328,19 @@ impl<'a> Grid<'a> {
                 geo_types::Geometry::Polygon(poly) => {
                     let mut exterior = Vec::with_capacity(poly.exterior().0.len());
                     for p in poly.exterior().0.iter() {
-                        exterior.push(self.get_interp_point(&p));
+                        exterior.push(self.get_interp_point(p));
                     }
                     let mut interiors = Vec::with_capacity(poly.interiors().len());
                     for interior in poly.interiors() {
                         let mut interior_points = Vec::with_capacity(interior.0.len());
                         for p in interior.0.iter() {
-                            interior_points.push(self.get_interp_point(&p));
+                            interior_points.push(self.get_interp_point(p));
                         }
                         interiors.push(interior_points.into());
                     }
                     result.push(geo_types::Geometry::Polygon(geo_types::Polygon::new(
                         exterior.into(),
-                        interiors.into(),
+                        interiors,
                     )));
                 }
                 geo_types::Geometry::MultiPolygon(mpoly) => {
@@ -339,18 +348,17 @@ impl<'a> Grid<'a> {
                     for poly in mpoly.iter() {
                         let mut exterior = Vec::with_capacity(poly.exterior().0.len());
                         for p in poly.exterior().0.iter() {
-                            exterior.push(self.get_interp_point(&p));
+                            exterior.push(self.get_interp_point(p));
                         }
                         let mut interiors = Vec::with_capacity(poly.interiors().len());
                         for interior in poly.interiors() {
                             let mut interior_points = Vec::with_capacity(interior.0.len());
                             for p in interior.0.iter() {
-                                interior_points.push(self.get_interp_point(&p));
+                                interior_points.push(self.get_interp_point(p));
                             }
                             interiors.push(interior_points.into());
                         }
-                        multi_polygon
-                            .push(geo_types::Polygon::new(exterior.into(), interiors.into()));
+                        multi_polygon.push(geo_types::Polygon::new(exterior.into(), interiors));
                     }
                     result.push(geo_types::Geometry::MultiPolygon(geo_types::MultiPolygon(
                         multi_polygon,
