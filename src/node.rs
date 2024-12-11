@@ -96,6 +96,10 @@ impl NodeSet {
         }
     }
 
+    pub fn is_in_grid(&self, i: usize, j: usize) -> bool {
+        i >= 0 && i < self.height && j >= 0 && j < self.width
+    }
+
     pub fn get_node(&self, i: usize, j: usize) -> &Node {
         &self.nodes[i * self.width + j]
     }

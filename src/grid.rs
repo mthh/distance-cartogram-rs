@@ -204,6 +204,76 @@ impl<'a> Grid<'a> {
         result
     }
 
+    fn get_diff(&self, i: usize, j: usize) -> [f64; 4] {
+        let mut diff = [0.; 4];
+        let n = if self.nodes.is_in_grid(i, j) { Some(self.nodes.get_node(i, j)) } else { None };
+        let ny1 = if self.nodes.is_in_grid(i - 1, j) {
+            Some(self.nodes.get_node(i - 1, j))
+        } else {
+            None
+        };
+        let ny2 = if self.nodes.is_in_grid(i + 1, j) {
+            Some(self.nodes.get_node(i + 1, j))
+        } else {
+            None
+        };
+        let nx1 = if self.nodes.is_in_grid(i, j - 1) {
+            Some(self.nodes.get_node(i, j - 1))
+        } else {
+            None
+        };
+        let nx2 = if self.nodes.is_in_grid(i, j + 1) {
+            Some(self.nodes.get_node(i, j + 1))
+        } else {
+            None
+        };
+        if nx1.is_none() {
+            diff[0] = (nx2.unwrap().interp.x - n.unwrap().interp.x) / self.nodes.resolution;
+            diff[1] = (nx2.unwrap().interp.y - n.unwrap().interp.y) / self.nodes.resolution;
+        } else if nx2.is_none() {
+            diff[0] = (n.unwrap().interp.x - nx1.unwrap().interp.x) / self.nodes.resolution;
+            diff[1] = (n.unwrap().interp.y - nx1.unwrap().interp.y) / self.nodes.resolution;
+        } else {
+            diff[0] = (nx2.unwrap().interp.x - nx1.unwrap().interp.x) / (2. * self.nodes.resolution);
+            diff[1] = (nx2.unwrap().interp.y - nx1.unwrap().interp.y) / (2. * self.nodes.resolution);
+        }
+
+        if ny1.is_none() {
+            diff[2] = (n.unwrap().interp.x - ny2.unwrap().interp.x) / self.nodes.resolution;
+            diff[3] = (n.unwrap().interp.y - ny2.unwrap().interp.y) / self.nodes.resolution;
+        } else if ny2.is_none() {
+            diff[2] = (ny1.unwrap().interp.x - n.unwrap().interp.x) / self.nodes.resolution;
+            diff[3] = (ny1.unwrap().interp.y - n.unwrap().interp.y) / self.nodes.resolution;
+        } else {
+            diff[2] = (ny1.unwrap().interp.x - ny2.unwrap().interp.x) / (2. * self.nodes.resolution);
+            diff[3] = (ny1.unwrap().interp.y - ny2.unwrap().interp.y) / (2. * self.nodes.resolution);
+        }
+        diff
+    }
+
+    /// The deformation strength for the node at position (i, j)
+    pub fn node_deformation_strength(&self, i: usize, j: usize) -> f64 {
+        let diff = self.get_diff(i, j);
+        ((diff[0].powi(2) + diff[1].powi(2) + diff[2].powi(3) + diff[3].powi(2)) / 2.).sqrt()
+    }
+
+    /// The average deformation strength for the grid
+    pub fn deformation_strength(&self) -> f64 {
+        (self.sum_squared_deformation_strength() / (self.nodes.width * self.nodes.height) as f64).sqrt()
+    }
+
+    /// The sum of squared deformation strength for the grid
+    pub fn sum_squared_deformation_strength(&self) -> f64 {
+        let mut m2 = 0.;
+        for i in 0..self.nodes.height {
+            for j in 0..self.nodes.width {
+                let diff = self.get_diff(i, j);
+                m2 += (diff[0].powi(2) + diff[1].powi(2) + diff[2].powi(3) + diff[3].powi(2)) / 2.;
+            }
+        }
+        m2
+    }
+
     /// Interpolate a collection of geo_types geometries on the interpolation grid.
     pub fn interpolate_layer(
         &self,
