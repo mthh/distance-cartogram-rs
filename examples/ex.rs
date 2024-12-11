@@ -125,7 +125,7 @@ pub fn main() {
     let mut xmax = f64::NEG_INFINITY;
     let mut ymax = f64::NEG_INFINITY;
 
-    let box_coord = |c| {
+    let mut box_coord = |c: &Coord| {
         if c.x < xmin {
             xmin = c.x;
         }
@@ -142,11 +142,11 @@ pub fn main() {
 
     bg.iter().for_each(|f| match f {
         geo_types::Geometry::Polygon(p) => {
-            p.exterior().0.iter().for_each(box_coord);
+            p.exterior().0.iter().for_each(|c| box_coord(c));
         }
         geo_types::Geometry::MultiPolygon(mp) => {
             mp.iter().for_each(|p| {
-                p.exterior().0.iter().for_each(box_coord);
+                p.exterior().0.iter().for_each(|c| box_coord(c));
             });
         }
         _ => panic!("Only Polygon and MultiPolygon are supported for now"),
@@ -159,12 +159,25 @@ pub fn main() {
     let mut grid = Grid::new(&points_source, 2., Some((xmin, ymin, xmax, ymax).into()));
     grid.interpolate(&points_image, n_iter);
 
+    // Get the source grid and the interpolated grid...
+    let grid_source = prepare_grid_geojson(&grid, GridType::Source, Some(fm.clone()));
+    let grid_interpolated = prepare_grid_geojson(&grid, GridType::Interpolated, Some(fm.clone()));
+
+    // ... and save them to files for latter visualization
+    let mut file =
+        std::fs::File::create("examples/grid-source.geojson").expect("Unable to create file");
+    file.write(grid_source.to_string().as_bytes());
+
+    let mut file =
+        std::fs::File::create("examples/grid-interpolated.geojson").expect("Unable to create file");
+    file.write(grid_interpolated.to_string().as_bytes());
+
     // Transform the background layer
     let bg_transformed = grid.interpolate_layer(&bg);
 
     // Write the GeoJson to a file, taking care to transferring the original properties
     let mut features = Vec::new();
-    for (polygon, props) in bg_transformed.iter().zip(props_bg_layer.into_iter()) {
+    for (polygon, props) in bg_transformed.into_iter().zip(props_bg_layer.into_iter()) {
         let geometry = Geometry::new(geojson::Value::from(&polygon));
         let feature = Feature {
             bbox: None,
@@ -183,17 +196,4 @@ pub fn main() {
     let mut file =
         std::fs::File::create("examples/data-transformed.geojson").expect("Unable to create file");
     let _ = file.write(geojson.to_string().as_bytes());
-
-    // Get the source grid and the interpolated grid...
-    let grid_source = prepare_grid_geojson(&grid, GridType::Source, Some(fm.clone()));
-    let grid_interpolated = prepare_grid_geojson(&grid, GridType::Interpolated, Some(fm.clone()));
-
-    // ... and save them to files for latter visualization
-    let mut file =
-        std::fs::File::create("examples/grid-source.geojson").expect("Unable to create file");
-    file.write(grid_source.to_string().as_bytes());
-
-    let mut file =
-        std::fs::File::create("examples/grid-interpolated.geojson").expect("Unable to create file");
-    file.write(grid_interpolated.to_string().as_bytes());
 }
