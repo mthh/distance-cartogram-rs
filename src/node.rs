@@ -105,11 +105,11 @@ impl NodeSet {
     }
 
     fn get_i(&self, p: &Coord) -> usize {
-        ((self.zone.max_y() - p.y) / self.resolution).round() as usize
+        ((self.zone.max_y() - p.y) / self.resolution).floor() as usize
     }
 
     fn get_j(&self, p: &Coord) -> usize {
-        ((p.x - self.zone.min_x()) / self.resolution).round() as usize
+        ((p.x - self.zone.min_x()) / self.resolution).floor() as usize
     }
 
     pub fn get_adjacent_nodes(&self, point: &Coord) -> [Node; 4] {

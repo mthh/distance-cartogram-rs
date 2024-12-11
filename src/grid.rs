@@ -107,13 +107,11 @@ impl<'a> Grid<'a> {
                     let adj_x =
                         u * v * ((dx - qx[i] + sqx) * w[i] + delta_zx[i] * (w[i] * w[i] - sw))
                             / adj_nodes[i].weight;
-                    self.nodes.update_adjacent_node(src_pt, i, |node| {
-                        node.interp.x += adj_x;
-                    });
                     let adj_y =
                         u * v * ((dy - qy[i] + sqy) * w[i] + delta_zy[i] * (w[i] * w[i] - sw))
                             / adj_nodes[i].weight;
                     self.nodes.update_adjacent_node(src_pt, i, |node| {
+                        node.interp.x += adj_x;
                         node.interp.y += adj_y;
                     });
                 }
@@ -259,7 +257,7 @@ impl<'a> Grid<'a> {
                         for p in interior.0.iter() {
                             interior_points.push(self.get_interp_point(&p));
                         }
-                        interiors.push(geo_types::LineString(interior_points));
+                        interiors.push(interior_points.into());
                     }
                     result.push(geo_types::Geometry::Polygon(geo_types::Polygon::new(
                         exterior.into(),
@@ -279,7 +277,7 @@ impl<'a> Grid<'a> {
                             for p in interior.0.iter() {
                                 interior_points.push(self.get_interp_point(&p));
                             }
-                            interiors.push(geo_types::LineString(interior_points));
+                            interiors.push(interior_points.into());
                         }
                         multi_polygon
                             .push(geo_types::Polygon::new(exterior.into(), interiors.into()));
