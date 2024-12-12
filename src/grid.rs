@@ -13,12 +13,12 @@ pub enum GridType {
 
 /// The grid for interpolating shifting in x and y.
 ///  Based on Waldo Tobler bidimensional regression.
-pub struct Grid<'a> {
-    points: &'a [Coord],
+pub struct Grid {
+    // points: &'a [Coord],
     nodes: NodeSet,
 }
 
-impl<'a> Grid<'a> {
+impl Grid {
     /// Create a new grid which covers the source points and with a cell size
     /// deduced from the precision.
     ///
@@ -30,14 +30,22 @@ impl<'a> Grid<'a> {
     /// for example 0.5 generally gives a coarse result, 2 a satisfactory result
     /// and 4 a particularly fine result). A precision of 2 is usually a good
     /// default value.
-    pub fn new(points: &'a [Coord], precision: f64, bbox: Option<BBox>) -> Grid<'a> {
-        let mut nodes = NodeSet::new(points, precision, bbox);
+    pub fn new(
+        source_points: &[Coord],
+        image_points: &[Coord],
+        precision: f64,
+        n_iter: usize,
+        bbox: Option<BBox>,
+    ) -> Grid {
+        let mut nodes = NodeSet::new(source_points, precision, bbox);
 
-        for p in points {
+        for p in source_points {
             nodes.set_weight_adjacent_nodes(p, 1.0);
         }
 
-        Grid { points, nodes }
+        let mut g = Grid { nodes };
+        g.interpolate(source_points, image_points, n_iter);
+        g
     }
 
     /// Interpolate on the grid the local transformations between
@@ -48,13 +56,13 @@ impl<'a> Grid<'a> {
     /// The number of iterations is generally 4 times the square root of the
     /// number of points (see [`get_nb_iterations`](fn.get_nb_iterations.html)
     /// for computing the number of iterations from the number of points).
-    pub fn interpolate(&mut self, image_points: &[Coord], n_iter: usize) -> Vec<Coord> {
+    fn interpolate(&mut self, points: &[Coord], image_points: &[Coord], n_iter: usize) {
         // let rect = Rectangle2D::from_points(self.points);
         // let rect_adj = Rectangle2D::from_points(image_points);
         let mut rect = Rectangle2D::new(0., 0., -1., -1.);
         let mut rect_adj = Rectangle2D::new(0., 0., -1., -1.);
 
-        for pt in self.points {
+        for pt in points {
             rect.add(pt);
         }
         for pt in image_points {
@@ -70,7 +78,7 @@ impl<'a> Grid<'a> {
         let rect_dim = width * height;
 
         for _k in 0..n_iter {
-            for (src_pt, adj_pt) in self.points.iter().zip(image_points) {
+            for (src_pt, adj_pt) in points.iter().zip(image_points) {
                 let adj_nodes = self.nodes.get_adjacent_nodes(src_pt);
                 let smoothed_nodes = [
                     self.nodes
@@ -156,11 +164,6 @@ impl<'a> Grid<'a> {
                 }
             }
         }
-
-        self.points
-            .iter()
-            .map(|p| self.get_interp_point(p))
-            .collect::<Vec<_>>()
     }
 
     /// Interpolate the point src_point on the transformed grid

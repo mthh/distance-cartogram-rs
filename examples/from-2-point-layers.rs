@@ -165,11 +165,8 @@ pub fn main() {
 
     // Actual grid computation
     let t = Instant::now();
-    let mut grid = Grid::new(&points_source, 2., Some((xmin, ymin, xmax, ymax).into()));
-    println!("Grid creation: {:?}", t.elapsed());
-    let t = Instant::now();
-    grid.interpolate(&points_image, n_iter);
-    println!("Initial interpolation step: {:?}", t.elapsed());
+    let mut grid = Grid::new(&points_source, &points_image, 2., n_iter, Some((xmin, ymin, xmax, ymax).into()));
+    println!("Grid creation and initial interpolation step: {:?}", t.elapsed());
 
     // Transform the background layer
     let t = Instant::now();
