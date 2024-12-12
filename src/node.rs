@@ -43,9 +43,16 @@ pub(crate) struct NodeSet {
 impl NodeSet {
     pub fn new(points: &[Coord], precision: f64, bbox: Option<BBox>) -> NodeSet {
         let mut zone = if bbox.is_none() {
+            // Compute the rectangle from the given points
             Rectangle2D::from_points(points)
         } else {
-            Rectangle2D::from_bbox(&bbox.unwrap())
+            // Use the given bounding box to create the rectangle
+            let mut r = Rectangle2D::from_bbox(&bbox.unwrap());
+            // And extend it to include all source points if necessary
+            for p in points {
+                r.add(p);
+            }
+            r
         };
         let resolution =
             1. / precision * (zone.width() * zone.height() / points.len() as f64).sqrt();
@@ -159,18 +166,18 @@ impl NodeSet {
 
     pub fn get_smoothed(&self, i: usize, j: usize, scale_x: f64, scale_y: f64) -> Coord {
         if i > 1 && j > 1 && i < self.height - 2 && j < self.width - 2 {
-            let pa = &self.get_node(i - 1, j).interp;
-            let pb = &self.get_node(i + 1, j).interp;
-            let pc = &self.get_node(i, j - 1).interp;
-            let pd = &self.get_node(i, j + 1).interp;
-            let pe = &self.get_node(i - 1, j - 1).interp;
-            let pf = &self.get_node(i + 1, j - 1).interp;
-            let pg = &self.get_node(i + 1, j + 1).interp;
-            let ph = &self.get_node(i - 1, j + 1).interp;
-            let pi = &self.get_node(i - 2, j).interp;
-            let pj = &self.get_node(i + 2, j).interp;
-            let pk = &self.get_node(i, j - 2).interp;
-            let pl = &self.get_node(i, j + 2).interp;
+            let pa = self.get_node(i - 1, j).interp;
+            let pb = self.get_node(i + 1, j).interp;
+            let pc = self.get_node(i, j - 1).interp;
+            let pd = self.get_node(i, j + 1).interp;
+            let pe = self.get_node(i - 1, j - 1).interp;
+            let pf = self.get_node(i + 1, j - 1).interp;
+            let pg = self.get_node(i + 1, j + 1).interp;
+            let ph = self.get_node(i - 1, j + 1).interp;
+            let pi = self.get_node(i - 2, j).interp;
+            let pj = self.get_node(i + 2, j).interp;
+            let pk = self.get_node(i, j - 2).interp;
+            let pl = self.get_node(i, j + 2).interp;
             Coord {
                 x: (8. * (pa.x + pb.x + pc.x + pd.x)
                     - 2. * (pe.x + pf.x + pg.x + ph.x)

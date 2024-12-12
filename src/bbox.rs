@@ -1,3 +1,4 @@
+/// Bounding box, defined by its minimum and maximum coordinates.
 #[derive(Debug)]
 pub struct BBox {
     pub xmin: f64,

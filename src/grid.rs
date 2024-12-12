@@ -4,6 +4,7 @@ use crate::rectangle::Rectangle2D;
 use crate::utils::distance_sq;
 use geo_types::Coord;
 
+/// The type of grid
 #[derive(Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub enum GridType {
     Source,
@@ -20,7 +21,16 @@ pub struct Grid<'a> {
 impl<'a> Grid<'a> {
     /// Create a new grid which covers the source points and with a cell size
     /// deduced from the precision.
-    pub fn new(points: &'a [Coord], precision: f64, bbox: Option<BBox>) -> Grid {
+    ///
+    /// If the bbox is not provided, the grid dimension will be deduced from
+    /// the source points.
+    /// If the bbox provided does not cover all the source points, the grid will
+    /// be extended to cover all the source points.
+    /// The precision controls the size of the grid cells (higher is more precise,
+    /// for example 0.5 generally gives a coarse result, 2 a satisfactory result
+    /// and 4 a particularly fine result). A precision of 2 is usually a good
+    /// default value.
+    pub fn new(points: &'a [Coord], precision: f64, bbox: Option<BBox>) -> Grid<'a> {
         let mut nodes = NodeSet::new(points, precision, bbox);
 
         for p in points {
@@ -30,7 +40,14 @@ impl<'a> Grid<'a> {
         Grid { points, nodes }
     }
 
-    /// Interpolate on the grid the local transformations between the source points and images_points.
+    /// Interpolate on the grid the local transformations between
+    /// the source points and images_points.
+    ///
+    /// Since these are homologous points, there must be as many points as
+    /// “src_points” and they must be given in the same order.
+    /// The number of iterations is generally 4 times the square root of the
+    /// number of points (see [`get_nb_iterations`](fn.get_nb_iterations.html)
+    /// for computing the number of iterations from the number of points).
     pub fn interpolate(&mut self, image_points: &[Coord], n_iter: usize) -> Vec<Coord> {
         // let rect = Rectangle2D::from_points(self.points);
         // let rect_adj = Rectangle2D::from_points(image_points);
@@ -166,7 +183,8 @@ impl<'a> Grid<'a> {
         Coord { x: hx, y: hy }
     }
 
-    /// Returns the coordinates of the grid
+    /// Returns the coordinates of the grid (either source or interpolated).
+    /// The grid is returned as a collection of geo_types polygons.
     pub fn get_grid(&self, grid_type: GridType) -> Vec<geo_types::Polygon> {
         let mut result = Vec::with_capacity((self.nodes.height - 1) * (self.nodes.width - 1));
         if grid_type == GridType::Source {
@@ -259,19 +277,19 @@ impl<'a> Grid<'a> {
         diff
     }
 
-    /// The deformation strength for the node at position (i, j)
+    /// Compute the deformation strength for the node at position (i, j)
     pub fn node_deformation_strength(&self, i: usize, j: usize) -> f64 {
         let diff = self.get_diff(i, j);
         ((diff[0].powi(2) + diff[1].powi(2) + diff[2].powi(3) + diff[3].powi(2)) / 2.).sqrt()
     }
 
-    /// The average deformation strength for the grid
+    /// Compute the average deformation strength for the grid
     pub fn deformation_strength(&self) -> f64 {
         (self.sum_squared_deformation_strength() / (self.nodes.width * self.nodes.height) as f64)
             .sqrt()
     }
 
-    /// The sum of squared deformation strength for the grid
+    /// Compute the sum of squared deformation strength for the grid
     pub fn sum_squared_deformation_strength(&self) -> f64 {
         let mut m2 = 0.;
         for i in 0..self.nodes.height {
