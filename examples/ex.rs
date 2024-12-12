@@ -2,6 +2,7 @@ use distance_cartogram::{get_nb_iterations, Grid, GridType};
 use geo_types::Coord;
 use geojson::{Feature, FeatureCollection, GeoJson, Geometry, Value};
 use std::io::Write;
+use std::time::Instant;
 
 fn prepare_grid_geojson(
     grid: &Grid,
@@ -125,6 +126,7 @@ pub fn main() {
         .collect::<Vec<_>>();
 
     // Compute BBox of background layer
+    let t = Instant::now();
     let mut xmin = f64::INFINITY;
     let mut ymin = f64::INFINITY;
     let mut xmax = f64::NEG_INFINITY;
@@ -156,13 +158,23 @@ pub fn main() {
         }
         _ => panic!("Only Polygon and MultiPolygon are supported for now"),
     });
+    println!("BBox computation: {:?}", t.elapsed());
 
     // How much iterations to perform
     let n_iter = get_nb_iterations(points_source.len());
 
     // Actual grid computation
+    let t = Instant::now();
     let mut grid = Grid::new(&points_source, 2., Some((xmin, ymin, xmax, ymax).into()));
+    println!("Grid creation: {:?}", t.elapsed());
+    let t = Instant::now();
     grid.interpolate(&points_image, n_iter);
+    println!("Initial interpolation step: {:?}", t.elapsed());
+
+    // Transform the background layer
+    let t = Instant::now();
+    let bg_transformed = grid.interpolate_layer(&bg);
+    println!("Layer interpolation: {:?}", t.elapsed());
 
     // Get the source grid and the interpolated grid...
     let grid_source = prepare_grid_geojson(&grid, GridType::Source, Some(fm.clone()));
@@ -176,9 +188,6 @@ pub fn main() {
     let mut file =
         std::fs::File::create("examples/grid-interpolated.geojson").expect("Unable to create file");
     file.write(grid_interpolated.to_string().as_bytes());
-
-    // Transform the background layer
-    let bg_transformed = grid.interpolate_layer(&bg);
 
     // Write the GeoJson to a file, taking care to transferring the original properties
     let mut features = Vec::new();
