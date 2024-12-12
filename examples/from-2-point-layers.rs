@@ -183,11 +183,13 @@ pub fn main() {
     // ... and save them to files for latter visualization
     let mut file =
         std::fs::File::create("examples/grid-source.geojson").expect("Unable to create file");
-    file.write(grid_source.to_string().as_bytes());
+    file.write_all(grid_source.to_string().as_bytes())
+        .expect("Unable to write file grid-source.geojson");
 
     let mut file =
         std::fs::File::create("examples/grid-interpolated.geojson").expect("Unable to create file");
-    file.write(grid_interpolated.to_string().as_bytes());
+    file.write_all(grid_interpolated.to_string().as_bytes())
+        .expect("Unable to write file grid-interpolated.geojson");
 
     // Write the GeoJson to a file, taking care to transferring the original properties
     let mut features = Vec::new();
@@ -209,5 +211,6 @@ pub fn main() {
     });
     let mut file =
         std::fs::File::create("examples/data-transformed.geojson").expect("Unable to create file");
-    let _ = file.write(geojson.to_string().as_bytes());
+    file.write_all(geojson.to_string().as_bytes())
+        .expect("Unable to write file data-transformed.geojson");
 }
