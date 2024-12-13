@@ -190,35 +190,22 @@ impl Grid {
     /// The grid is returned as a collection of geo_types polygons.
     pub fn get_grid(&self, grid_type: GridType) -> Vec<geo_types::Polygon> {
         let mut result = Vec::with_capacity((self.nodes.height - 1) * (self.nodes.width - 1));
-        if grid_type == GridType::Source {
-            for i in 0..(self.nodes.height - 1) {
-                for j in 0..(self.nodes.width - 1) {
-                    result.push(geo_types::Polygon::new(
-                        vec![
-                            self.nodes.get_node(i, j).source,
-                            self.nodes.get_node(i + 1, j).source,
-                            self.nodes.get_node(i + 1, j + 1).source,
-                            self.nodes.get_node(i, j + 1).source,
-                        ]
-                        .into(),
-                        vec![],
-                    ));
-                }
-            }
-        } else {
-            for i in 0..(self.nodes.height - 1) {
-                for j in 0..(self.nodes.width - 1) {
-                    result.push(geo_types::Polygon::new(
-                        vec![
-                            self.nodes.get_node(i, j).interp,
-                            self.nodes.get_node(i + 1, j).interp,
-                            self.nodes.get_node(i + 1, j + 1).interp,
-                            self.nodes.get_node(i, j + 1).interp,
-                        ]
-                        .into(),
-                        vec![],
-                    ));
-                }
+        let point_getter = match grid_type {
+            GridType::Source => |node: &crate::node::Node| node.source,
+            GridType::Interpolated => |node: &crate::node::Node| node.interp,
+        };
+        for i in 0..(self.nodes.height - 1) {
+            for j in 0..(self.nodes.width - 1) {
+                result.push(geo_types::Polygon::new(
+                    vec![
+                        point_getter(self.nodes.get_node(i, j)),
+                        point_getter(self.nodes.get_node(i + 1, j)),
+                        point_getter(self.nodes.get_node(i + 1, j + 1)),
+                        point_getter(self.nodes.get_node(i, j + 1)),
+                    ]
+                    .into(),
+                    vec![],
+                ));
             }
         }
 
@@ -227,28 +214,30 @@ impl Grid {
 
     fn get_diff(&self, i: usize, j: usize) -> [f64; 4] {
         let mut diff = [0.; 4];
+        let i = i as isize;
+        let j = j as isize;
         let n = if self.nodes.is_in_grid(i, j) {
-            Some(self.nodes.get_node(i, j))
+            Some(self.nodes.get_node(i as usize, j as usize))
         } else {
             None
         };
         let ny1 = if self.nodes.is_in_grid(i - 1, j) {
-            Some(self.nodes.get_node(i - 1, j))
+            Some(self.nodes.get_node((i - 1) as usize, j as usize))
         } else {
             None
         };
         let ny2 = if self.nodes.is_in_grid(i + 1, j) {
-            Some(self.nodes.get_node(i + 1, j))
+            Some(self.nodes.get_node((i + 1) as usize, j as usize))
         } else {
             None
         };
         let nx1 = if self.nodes.is_in_grid(i, j - 1) {
-            Some(self.nodes.get_node(i, j - 1))
+            Some(self.nodes.get_node(i as usize, (j - 1) as usize))
         } else {
             None
         };
         let nx2 = if self.nodes.is_in_grid(i, j + 1) {
-            Some(self.nodes.get_node(i, j + 1))
+            Some(self.nodes.get_node(i as usize, (j + 1) as usize))
         } else {
             None
         };
@@ -290,6 +279,12 @@ impl Grid {
     pub fn deformation_strength(&self) -> f64 {
         (self.sum_squared_deformation_strength() / (self.nodes.width * self.nodes.height) as f64)
             .sqrt()
+    }
+
+    /// Retrieve the resolution value
+    /// (computed from the precision given at the grid creation)
+    pub fn resolution(&self) -> f64 {
+        self.nodes.resolution
     }
 
     /// Compute the sum of squared deformation strength for the grid
