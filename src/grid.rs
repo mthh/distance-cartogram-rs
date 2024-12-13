@@ -11,25 +11,33 @@ pub enum GridType {
     Interpolated,
 }
 
-/// The grid for interpolating shifting in x and y.
-///  Based on Waldo Tobler bidimensional regression.
+/// The grid for interpolating and deforming geometries.
+/// Based on Waldo Tobler bidimensional regression.
 pub struct Grid {
-    // points: &'a [Coord],
     nodes: NodeSet,
 }
 
 impl Grid {
     /// Create a new grid which covers the source points and with a cell size
-    /// deduced from the precision.
+    /// deduced from the precision. The grid is then interpolated to match the
+    /// image points. This then allows to interpolate any point on the grid
+    /// (enabling the deformation of geometries such as background layers)
+    /// and to retrieve useful metrics about the deformation.
     ///
     /// If the bbox is not provided, the grid dimension will be deduced from
     /// the source points.
     /// If the bbox provided does not cover all the source points, the grid will
     /// be extended to cover all the source points.
+    ///
     /// The precision controls the size of the grid cells (higher is more precise,
     /// for example 0.5 generally gives a coarse result, 2 a satisfactory result
     /// and 4 a particularly fine result). A precision of 2 is usually a good
     /// default value.
+    ///
+    /// The number of iterations controls the number of iterations for the
+    /// interpolation. It is generally 4 times the square root of the number of
+    /// points (see `get_nb_iterations` helper function for computing it from
+    /// the number of points).
     pub fn new(
         source_points: &[Coord],
         image_points: &[Coord],
@@ -152,6 +160,11 @@ impl Grid {
                         if node.weight == 0. {
                             p_tmp.x = node.interp.x;
                             p_tmp.y = node.interp.y;
+                            // The smoothed point p could be computed here
+                            // but for ownership reasons, we retrieve it before checking
+                            // the weight of the node.
+                            // The cost is probably negligible, but it could be improved
+                            // in the future.
                             // let p = self.nodes.get_smoothed(i, j, scale_x, scale_y);
                             node.interp.x = p.x;
                             node.interp.y = p.y;
@@ -186,7 +199,7 @@ impl Grid {
         Coord { x: hx, y: hy }
     }
 
-    /// Returns the coordinates of the grid (either source or interpolated).
+    /// Returns the geometry of the grid (either source grid or interpolated grid).
     /// The grid is returned as a collection of geo_types polygons.
     pub fn get_grid(&self, grid_type: GridType) -> Vec<geo_types::Polygon> {
         let mut result = Vec::with_capacity((self.nodes.height - 1) * (self.nodes.width - 1));

@@ -1,6 +1,6 @@
 # Distance-cartogram-rs
 
-A Rust implementation of Distance Cartogram, to be used from R to create a (hopefully) fast distance cartogram package for R.
+A Rust implementation of distance cartogram (based on Waldo Tobler's bidimensional regression) to be used to create a fast distance cartogram package for R.
 
 
 > **Notes**:
@@ -12,7 +12,15 @@ All credits for the contribution of the method goes to **Colette Cauvin** *(Thé
 
 _**From Rust**_:
 
-See the examples in the [`examples`](./examples) directory.
+The core features provided by this library is a `Grid` struct that have to be initialized from two sets of homologous points
+(called the *source points* and the *image points*, and provided as two `&[geo_types::Coord<f64>]`).
+
+During the initialization, a grid is created and the initial interpolation step is performed.
+
+The grid can then be used to deform a set of points (provided as a `&[geo_types::Geometry]` - all types of geometries are supported)
+to their corresponding positions in the cartogram.
+
+See the examples in the [`examples`](./examples) directory for more details.
 
 _**From R**_:
 
