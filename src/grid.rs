@@ -155,17 +155,11 @@ impl Grid {
                 let mut delta = 0.0f64;
                 for i in 0..height {
                     for j in 0..width {
-                        let p = self.nodes.get_smoothed(i, j, scale_x, scale_y);
-                        let node = self.nodes.get_mut_node(i, j);
-                        if node.weight == 0. {
+                        if self.nodes.get_node(i, j).weight == 0. {
+                            let p = self.nodes.get_smoothed(i, j, scale_x, scale_y);
+                            let node = self.nodes.get_mut_node(i, j);
                             p_tmp.x = node.interp.x;
                             p_tmp.y = node.interp.y;
-                            // The smoothed point p could be computed here
-                            // but for ownership reasons, we retrieve it before checking
-                            // the weight of the node.
-                            // The cost is probably negligible, but it could be improved
-                            // in the future.
-                            // let p = self.nodes.get_smoothed(i, j, scale_x, scale_y);
                             node.interp.x = p.x;
                             node.interp.y = p.y;
                             delta = delta.max(distance_sq(&p_tmp, &node.interp) / rect_dim as f64);
