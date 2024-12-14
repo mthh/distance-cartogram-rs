@@ -204,6 +204,8 @@ impl Grid {
         for i in 0..(self.nodes.height - 1) {
             for j in 0..(self.nodes.width - 1) {
                 result.push(geo_types::Polygon::new(
+                    // Geo-types is closing the polygon,
+                    // so we don't need to repeat the first point ourselves
                     vec![
                         point_getter(self.nodes.get_node(i, j)),
                         point_getter(self.nodes.get_node(i + 1, j)),
@@ -304,6 +306,12 @@ impl Grid {
             }
         }
         m2
+    }
+
+
+    /// Retrieve the bbox of the grid
+    pub fn bbox(&self) -> BBox {
+        self.nodes.zone.as_bbox()
     }
 
     /// Interpolate a collection of geo_types geometries on the interpolation grid.
