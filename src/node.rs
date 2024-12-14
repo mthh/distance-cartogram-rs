@@ -138,10 +138,10 @@ impl NodeSet {
         let i = self.get_i(point);
         let j = self.get_j(point);
         [
-            &self.get_node(i, j),
-            &self.get_node(i, j + 1),
-            &self.get_node(i + 1, j),
-            &self.get_node(i + 1, j + 1),
+            self.get_node(i, j),
+            self.get_node(i, j + 1),
+            self.get_node(i + 1, j),
+            self.get_node(i + 1, j + 1),
         ]
     }
 
