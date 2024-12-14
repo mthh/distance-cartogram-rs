@@ -181,7 +181,7 @@ impl Grid {
 
     /// Interpolate the point src_point on the transformed grid
     pub fn get_interp_point(&self, src_point: &Coord) -> Coord {
-        let adj_nodes = self.nodes.get_adjacent_nodes(src_point);
+        let adj_nodes = self.nodes.get_adjacent_nodes_ref(src_point);
         let resolution = self.nodes.resolution;
         let ux1 = src_point.x - adj_nodes[0].source.x;
         let vy1 = src_point.y - adj_nodes[2].source.y;

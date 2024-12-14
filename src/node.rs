@@ -134,6 +134,17 @@ impl NodeSet {
         ]
     }
 
+    pub fn get_adjacent_nodes_ref(&self, point: &Coord) -> [&Node; 4] {
+        let i = self.get_i(point);
+        let j = self.get_j(point);
+        [
+            &self.get_node(i, j),
+            &self.get_node(i, j + 1),
+            &self.get_node(i + 1, j),
+            &self.get_node(i + 1, j + 1),
+        ]
+    }
+
     pub fn update_adjacent_node<F>(&mut self, point: &Coord, i: usize, mut f: F)
     where
         F: FnMut(&mut Node),
