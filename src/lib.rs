@@ -12,6 +12,11 @@ pub use bbox::BBox;
 pub use grid::{Grid, GridType};
 pub use utils::get_nb_iterations;
 
+#[cfg(feature = "moving-points")]
+pub use moving_points::move_points;
+#[cfg(feature = "moving-points")]
+pub use moving_points::CentralTendency;
+
 #[cfg(test)]
 mod tests {
 

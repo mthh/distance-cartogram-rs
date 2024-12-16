@@ -1,11 +1,17 @@
 use crate::errors::Error;
-use crate::utils::{distance, interpolate_line};
+use crate::utils::{distance, extrapole_line, interpolate_line, median};
 use geo_types::Coord;
+
+pub enum CentralTendency {
+    Mean,
+    Median,
+}
 
 pub fn move_points(
     source_points: &[Coord],
     times: &[f64],
     factor: f64,
+    method: CentralTendency,
 ) -> Result<Vec<Coord>, Error> {
     if source_points.len() != times.len() {
         return Err(Error::InvalidInputTimesLength);
@@ -33,10 +39,18 @@ pub fn move_points(
         })
         .collect();
 
-    let ref_speed = pt_time
-        .iter()
-        .fold(0.0, |acc, &(_, _, _, speed)| acc + speed)
-        / (pt_time.len() - 1) as f64;
+    let ref_speed = match method {
+        CentralTendency::Mean => {
+            pt_time.iter().map(|(_, _, _, speed)| speed).sum::<f64>() / pt_time.len() as f64
+        }
+        CentralTendency::Median => {
+            let speeds = pt_time
+                .iter()
+                .map(|(_, _, _, speed)| *speed)
+                .collect::<Vec<_>>();
+            median(&speeds)
+        }
+    };
 
     // So we have (point, time, distance, speed, displacement).
     let pt_times_displacement: Vec<(&Coord, f64, f64, f64, f64)> = pt_time
@@ -48,8 +62,13 @@ pub fn move_points(
     let mut new_points = Vec::with_capacity(source_points.len());
 
     for (i, (pt, t, dist, speed, displacement)) in pt_times_displacement.into_iter().enumerate() {
-        let displacement = 1. + (displacement - 1.) * factor;
-        let new_pt = interpolate_line(ref_point, pt, displacement);
+        let d = 1. + (displacement - 1.) * factor;
+        let new_pt = if displacement < 1.0 {
+            interpolate_line(ref_point, pt, d * dist)
+        } else {
+            let o_pt = extrapole_line(ref_point, pt, 2. * d);
+            interpolate_line(&ref_point, &o_pt, d * dist)
+        };
         new_points.push(new_pt);
         if i == idx {
             new_points.push(*ref_point);
