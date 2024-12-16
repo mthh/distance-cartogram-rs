@@ -38,8 +38,7 @@ pub(crate) fn interpolate_line(p1: &Coord, p2: &Coord, distance_along_line: f64)
 }
 
 #[cfg(feature = "moving-points")]
-pub(crate) fn median(series: &[f64]) -> f64 {
-    let mut series = series.iter().cloned().collect::<Vec<f64>>();
+pub(crate) fn median(mut series: Vec<f64>) -> f64 {
     series.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let mid = series.len() / 2;
     if series.len() % 2 == 0 {

@@ -48,7 +48,7 @@ pub fn move_points(
                 .iter()
                 .map(|(_, _, _, speed)| *speed)
                 .collect::<Vec<_>>();
-            median(&speeds)
+            median(speeds)
         }
     };
 
