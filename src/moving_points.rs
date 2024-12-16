@@ -1,12 +1,32 @@
 use crate::errors::Error;
-use crate::utils::{distance, extrapole_line, interpolate_line, median};
+use crate::utils::{distance, interpolate_line, median};
 use geo_types::Coord;
 
+/// The central tendency method to use to compute the reference speed
+/// for the movement of the points.
 pub enum CentralTendency {
     Mean,
     Median,
 }
 
+/// Move the points (using a central tendency method such as the
+/// mean or the median to compute the reference speed and determine
+/// how the points are moved).
+///
+/// If the points can can be reached with a speed
+/// (Euclidean distance / time) larger than the reference speed,
+/// they will be moved further away and conversely if they can be
+/// reached with a speed smaller than the reference speed, they will
+/// be moved closer.
+///
+/// The factor is a multiplier to the displacement that is computed
+/// from the reference speed (a factor of 1.0 should be the default
+/// value to use and a larger factor will move the points further
+/// away).
+///
+/// Note that the source points and the times must have the same length
+/// and that there must be a reference point for which the time is 0.
+/// If one of these conditions is not met, an error is returned.
 pub fn move_points(
     source_points: &[Coord],
     times: &[f64],
@@ -39,6 +59,7 @@ pub fn move_points(
         })
         .collect();
 
+    // Compute the reference speed from the given central tendency method
     let ref_speed = match method {
         CentralTendency::Mean => {
             pt_time.iter().map(|(_, _, _, speed)| speed).sum::<f64>() / pt_time.len() as f64
@@ -52,6 +73,7 @@ pub fn move_points(
         }
     };
 
+    // Get the displacement factor for each point given the reference speed.
     // So we have (point, time, distance, speed, displacement).
     let pt_times_displacement: Vec<(&Coord, f64, f64, f64, f64)> = pt_time
         .iter()
@@ -62,14 +84,12 @@ pub fn move_points(
     let mut new_points = Vec::with_capacity(source_points.len());
 
     for (i, (pt, t, dist, speed, displacement)) in pt_times_displacement.into_iter().enumerate() {
+        // Combine the factor and the computed displacement value
         let d = 1. + (displacement - 1.) * factor;
-        let new_pt = if displacement < 1.0 {
-            interpolate_line(ref_point, pt, d * dist)
-        } else {
-            let o_pt = extrapole_line(ref_point, pt, 2. * d);
-            interpolate_line(&ref_point, &o_pt, d * dist)
-        };
-        new_points.push(new_pt);
+        // Actually compute the position of the moved point
+        new_points.push(interpolate_line(ref_point, pt, d * dist));
+        // Add the reference point at the right index
+        // to return the points in the same order as the input.
         if i == idx {
             new_points.push(*ref_point);
         }

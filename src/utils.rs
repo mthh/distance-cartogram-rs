@@ -16,13 +16,6 @@ pub fn get_nb_iterations(nb_points: usize) -> usize {
 }
 
 #[cfg(feature = "moving-points")]
-pub(crate) fn extrapole_line(p1: &Coord, p2: &Coord, ratio: f64) -> Coord {
-    let x = p1.x + (p2.x - p1.x) * ratio;
-    let y = p1.y + (p2.y - p1.y) * ratio;
-    Coord { x, y }
-}
-
-#[cfg(feature = "moving-points")]
 pub(crate) fn interpolate_line(p1: &Coord, p2: &Coord, distance_along_line: f64) -> Coord {
     let total_distance = distance(p1, p2);
     if total_distance == 0. {
@@ -32,9 +25,10 @@ pub(crate) fn interpolate_line(p1: &Coord, p2: &Coord, distance_along_line: f64)
         return *p2;
     }
     let t = distance_along_line / total_distance;
-    let x = p1.x + (p2.x - p1.x) * t;
-    let y = p1.y + (p2.y - p1.y) * t;
-    Coord { x, y }
+    Coord {
+        x: p1.x + (p2.x - p1.x) * t,
+        y: p1.y + (p2.y - p1.y) * t,
+    }
 }
 
 #[cfg(feature = "moving-points")]

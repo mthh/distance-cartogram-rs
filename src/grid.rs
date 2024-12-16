@@ -39,6 +39,10 @@ impl Grid {
     /// interpolation. It is generally 4 times the square root of the number of
     /// points (see `get_nb_iterations` helper function for computing it from
     /// the number of points).
+    ///
+    /// Note that the number of source points must be equal to the number of
+    /// image points, and they must be given in the same order (as they are
+    /// homologous points).
     pub fn new(
         source_points: &[Coord],
         image_points: &[Coord],
@@ -62,12 +66,6 @@ impl Grid {
 
     /// Interpolate on the grid the local transformations between
     /// the source points and images_points.
-    ///
-    /// Since these are homologous points, there must be as many points as
-    /// “src_points” and they must be given in the same order.
-    /// The number of iterations is generally 4 times the square root of the
-    /// number of points (see [`get_nb_iterations`](fn.get_nb_iterations.html)
-    /// for computing the number of iterations from the number of points).
     fn interpolate(&mut self, points: &[Coord], image_points: &[Coord], n_iter: usize) {
         // let rect = Rectangle2D::from_points(self.points);
         // let rect_adj = Rectangle2D::from_points(image_points);
@@ -177,7 +175,9 @@ impl Grid {
         }
     }
 
-    /// Interpolate the point src_point on the transformed grid
+    /// Interpolate the point src_point on the transformed grid.
+    /// This is useful for deforming geometries and this function is
+    /// used internally by the `interpolate_layer` method.
     pub fn get_interp_point(&self, src_point: &Coord) -> Coord {
         let adj_nodes = self.nodes.get_adjacent_nodes_ref(src_point);
         let resolution = self.nodes.resolution;
