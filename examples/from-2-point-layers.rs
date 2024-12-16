@@ -32,6 +32,27 @@ fn prepare_grid_geojson(
     GeoJson::FeatureCollection(feature_collection)
 }
 
+fn read_crs(geojson_layer: &GeoJson) -> Option<geojson::JsonObject> {
+    let foreign_members = match &geojson_layer {
+        GeoJson::FeatureCollection(collection) => collection.foreign_members.as_ref(),
+        _ => panic!("Expected a feature collection"),
+    };
+    if let Some(foreign_members) = foreign_members {
+        if foreign_members.contains_key("crs") {
+            let mut fm = geojson::JsonObject::new();
+            fm.insert(
+                "crs".to_string(),
+                foreign_members.get("crs").unwrap().clone(),
+            );
+            Some(fm)
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}
+
 pub fn main() {
     let path_source = "examples/data-source-point.geojson";
     let path_image = "examples/data-image-point.geojson";
@@ -60,20 +81,8 @@ pub fn main() {
         _ => panic!("Expected a feature collection"),
     };
 
-    // We want to read the foreign members of the GeoJson FeatureCollection
-    let crs_background = match &geojson_background {
-        GeoJson::FeatureCollection(collection) => collection
-            .foreign_members
-            .as_ref()
-            .expect("No foreign members found")
-            .get("crs")
-            .expect("No crs found")
-            .clone(),
-        _ => panic!("Expected a feature collection"),
-    };
-
-    let mut fm = geojson::JsonObject::new();
-    fm.insert("crs".to_string(), crs_background);
+    // Read feature collection to get the crs of the layer if any
+    let crs_background = read_crs(&geojson_background);
 
     let features_background = match geojson_background {
         GeoJson::FeatureCollection(collection) => collection.features,
@@ -127,37 +136,7 @@ pub fn main() {
 
     // Compute BBox of background layer
     let t = Instant::now();
-    let mut xmin = f64::INFINITY;
-    let mut ymin = f64::INFINITY;
-    let mut xmax = f64::NEG_INFINITY;
-    let mut ymax = f64::NEG_INFINITY;
-
-    let mut box_coord = |c: &Coord| {
-        if c.x < xmin {
-            xmin = c.x;
-        }
-        if c.x > xmax {
-            xmax = c.x;
-        }
-        if c.y < ymin {
-            ymin = c.y;
-        }
-        if c.y > ymax {
-            ymax = c.y;
-        }
-    };
-
-    bg.iter().for_each(|f| match f {
-        geo_types::Geometry::Polygon(p) => {
-            p.exterior().0.iter().for_each(&mut box_coord);
-        }
-        geo_types::Geometry::MultiPolygon(mp) => {
-            mp.iter().for_each(|p| {
-                p.exterior().0.iter().for_each(&mut box_coord);
-            });
-        }
-        _ => panic!("Only Polygon and MultiPolygon are supported for now"),
-    });
+    let (xmin, ymin, xmax, ymax) = compute_bbox(&bg);
     println!("BBox computation: {:?}", t.elapsed());
 
     // How much iterations to perform
@@ -184,8 +163,9 @@ pub fn main() {
     println!("Layer interpolation: {:?}", t.elapsed());
 
     // Get the source grid and the interpolated grid...
-    let grid_source = prepare_grid_geojson(&grid, GridType::Source, Some(fm.clone()));
-    let grid_interpolated = prepare_grid_geojson(&grid, GridType::Interpolated, Some(fm.clone()));
+    let grid_source = prepare_grid_geojson(&grid, GridType::Source, crs_background.clone());
+    let grid_interpolated =
+        prepare_grid_geojson(&grid, GridType::Interpolated, crs_background.clone());
 
     // ... and save them to files for latter visualization
     let mut file =
@@ -214,10 +194,57 @@ pub fn main() {
     let geojson = GeoJson::FeatureCollection(FeatureCollection {
         bbox: None,
         features,
-        foreign_members: Some(fm),
+        foreign_members: crs_background,
     });
     let mut file =
         std::fs::File::create("examples/data-transformed.geojson").expect("Unable to create file");
     file.write_all(geojson.to_string().as_bytes())
         .expect("Unable to write file data-transformed.geojson");
+}
+
+fn compute_bbox(features: &[geo_types::Geometry]) -> (f64, f64, f64, f64) {
+    let mut xmin = f64::INFINITY;
+    let mut ymin = f64::INFINITY;
+    let mut xmax = f64::NEG_INFINITY;
+    let mut ymax = f64::NEG_INFINITY;
+
+    let mut box_coord = |c: &Coord| {
+        if c.x < xmin {
+            xmin = c.x;
+        }
+        if c.x > xmax {
+            xmax = c.x;
+        }
+        if c.y < ymin {
+            ymin = c.y;
+        }
+        if c.y > ymax {
+            ymax = c.y;
+        }
+    };
+
+    features.iter().for_each(|f| match f {
+        geo_types::Geometry::Point(p) => {
+            box_coord(&p.0);
+        }
+        geo_types::Geometry::MultiPoint(mp) => {
+            mp.iter().for_each(|p| box_coord(&p.0));
+        }
+        geo_types::Geometry::LineString(l) => {
+            l.0.iter().for_each(&mut box_coord);
+        }
+        geo_types::Geometry::MultiLineString(mls) => {
+            mls.iter().for_each(|l| l.0.iter().for_each(&mut box_coord))
+        }
+        geo_types::Geometry::Polygon(p) => {
+            p.exterior().0.iter().for_each(&mut box_coord);
+        }
+        geo_types::Geometry::MultiPolygon(mp) => {
+            mp.iter().for_each(|p| {
+                p.exterior().0.iter().for_each(&mut box_coord);
+            });
+        }
+        _ => unimplemented!("The geometry type provided is not supported here!"),
+    });
+    (xmin, ymin, xmax, ymax)
 }
