@@ -1,5 +1,9 @@
 mod bbox;
+mod errors;
 mod grid;
+
+#[cfg(feature = "moving-points")]
+mod moving_points;
 mod node;
 mod rectangle;
 mod utils;

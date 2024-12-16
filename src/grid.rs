@@ -1,4 +1,5 @@
 use crate::bbox::BBox;
+use crate::errors::Error;
 use crate::node::NodeSet;
 use crate::rectangle::Rectangle2D;
 use crate::utils::distance_sq;
@@ -44,7 +45,10 @@ impl Grid {
         precision: f64,
         n_iter: usize,
         bbox: Option<BBox>,
-    ) -> Grid {
+    ) -> Result<Grid, Error> {
+        if (source_points.len() != image_points.len()) || source_points.is_empty() {
+            return Err(Error::InvalidInputPointsLength);
+        }
         let mut nodes = NodeSet::new(source_points, precision, bbox);
 
         for p in source_points {
@@ -53,7 +57,7 @@ impl Grid {
 
         let mut g = Grid { nodes };
         g.interpolate(source_points, image_points, n_iter);
-        g
+        Ok(g)
     }
 
     /// Interpolate on the grid the local transformations between
@@ -307,7 +311,6 @@ impl Grid {
         }
         m2
     }
-
 
     /// Retrieve the bbox of the grid
     pub fn bbox(&self) -> BBox {

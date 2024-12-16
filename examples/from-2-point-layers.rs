@@ -171,7 +171,8 @@ pub fn main() {
         2.,
         n_iter,
         Some((xmin, ymin, xmax, ymax).into()),
-    );
+    )
+    .expect("Unable to create grid");
     println!(
         "Grid creation and initial interpolation step: {:?}",
         t.elapsed()
