@@ -1,4 +1,4 @@
-use distance_cartogram::{get_nb_iterations, Grid, GridType};
+use distance_cartogram::{get_nb_iterations, BBox, Grid, GridType};
 use geo_types::Coord;
 use geojson::{Feature, FeatureCollection, GeoJson, Geometry, Value};
 use std::io::Write;
@@ -136,7 +136,7 @@ pub fn main() {
 
     // Compute BBox of background layer
     let t = Instant::now();
-    let (xmin, ymin, xmax, ymax) = compute_bbox(&bg);
+    let bbox = BBox::from_geometries(&bg);
     println!("BBox computation: {:?}", t.elapsed());
 
     // How much iterations to perform
@@ -144,14 +144,8 @@ pub fn main() {
 
     // Actual grid computation
     let t = Instant::now();
-    let grid = Grid::new(
-        &points_source,
-        &points_image,
-        2.,
-        n_iter,
-        Some((xmin, ymin, xmax, ymax).into()),
-    )
-    .expect("Unable to create grid");
+    let grid = Grid::new(&points_source, &points_image, 2., n_iter, Some(bbox))
+        .expect("Unable to create grid");
     println!(
         "Grid creation and initial interpolation step: {:?}",
         t.elapsed()
@@ -159,7 +153,9 @@ pub fn main() {
 
     // Transform the background layer
     let t = Instant::now();
-    let bg_transformed = grid.interpolate_layer(&bg);
+    let bg_transformed = grid
+        .interpolate_layer(&bg)
+        .expect("Unable to interpolate layer");
     println!("Layer interpolation: {:?}", t.elapsed());
 
     // Get the source grid and the interpolated grid...
@@ -200,51 +196,4 @@ pub fn main() {
         std::fs::File::create("examples/data-transformed.geojson").expect("Unable to create file");
     file.write_all(geojson.to_string().as_bytes())
         .expect("Unable to write file data-transformed.geojson");
-}
-
-fn compute_bbox(features: &[geo_types::Geometry]) -> (f64, f64, f64, f64) {
-    let mut xmin = f64::INFINITY;
-    let mut ymin = f64::INFINITY;
-    let mut xmax = f64::NEG_INFINITY;
-    let mut ymax = f64::NEG_INFINITY;
-
-    let mut box_coord = |c: &Coord| {
-        if c.x < xmin {
-            xmin = c.x;
-        }
-        if c.x > xmax {
-            xmax = c.x;
-        }
-        if c.y < ymin {
-            ymin = c.y;
-        }
-        if c.y > ymax {
-            ymax = c.y;
-        }
-    };
-
-    features.iter().for_each(|f| match f {
-        geo_types::Geometry::Point(p) => {
-            box_coord(&p.0);
-        }
-        geo_types::Geometry::MultiPoint(mp) => {
-            mp.iter().for_each(|p| box_coord(&p.0));
-        }
-        geo_types::Geometry::LineString(l) => {
-            l.0.iter().for_each(&mut box_coord);
-        }
-        geo_types::Geometry::MultiLineString(mls) => {
-            mls.iter().for_each(|l| l.0.iter().for_each(&mut box_coord))
-        }
-        geo_types::Geometry::Polygon(p) => {
-            p.exterior().0.iter().for_each(&mut box_coord);
-        }
-        geo_types::Geometry::MultiPolygon(mp) => {
-            mp.iter().for_each(|p| {
-                p.exterior().0.iter().for_each(&mut box_coord);
-            });
-        }
-        _ => unimplemented!("The geometry type provided is not supported here!"),
-    });
-    (xmin, ymin, xmax, ymax)
 }
