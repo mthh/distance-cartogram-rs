@@ -5,7 +5,8 @@ use crate::rectangle::Rectangle2D;
 use crate::utils::distance_sq;
 use geo_types::Coord;
 
-/// The type of grid
+/// The type of grid to retrieve (source or interpolated,
+/// see [`Grid::get_grid`](Grid::get_grid) method).
 #[derive(Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub enum GridType {
     Source,
@@ -37,7 +38,7 @@ impl Grid {
     ///
     /// The number of iterations controls the number of iterations for the
     /// interpolation. It is generally 4 times the square root of the number of
-    /// points (see `get_nb_iterations` helper function for computing it from
+    /// points (see [`get_nb_iterations`] helper function for computing it from
     /// the number of points).
     ///
     /// Note that the number of source points must be equal to the number of
@@ -176,9 +177,16 @@ impl Grid {
     }
 
     /// Interpolate the point src_point on the transformed grid.
-    /// This is useful for deforming geometries and this function is
-    /// used internally by the `interpolate_layer` method.
-    pub fn get_interp_point(&self, src_point: &Coord) -> Coord {
+    /// This is useful for deforming geometries and the logic of this function is
+    /// used internally by the [`interpolate_layer`](Grid::interpolate_layer) method.
+    pub fn get_interp_point(&self, src_point: &Coord) -> Result<Coord, Error> {
+        if !self.bbox().contains(src_point) {
+            return Err(Error::PointNotInBBox);
+        }
+        Ok(self._get_interp_point(src_point))
+    }
+
+    fn _get_interp_point(&self, src_point: &Coord) -> Coord {
         let adj_nodes = self.nodes.get_adjacent_nodes_ref(src_point);
         let resolution = self.nodes.resolution;
         let ux1 = src_point.x - adj_nodes[0].source.x;
@@ -321,19 +329,23 @@ impl Grid {
     pub fn interpolate_layer(
         &self,
         geometries: &[geo_types::Geometry],
-    ) -> Vec<geo_types::Geometry> {
+    ) -> Result<Vec<geo_types::Geometry>, Error> {
+        let bbox = BBox::from_geometries(geometries);
+        if !self.bbox().contains_bbox(&bbox) {
+            return Err(Error::GeometriesNotInBBox);
+        }
         let mut result = Vec::with_capacity(geometries.len());
         for geom in geometries {
             match geom {
                 geo_types::Geometry::Point(p) => {
                     result.push(geo_types::Geometry::Point(geo_types::Point(
-                        self.get_interp_point(&p.0),
+                        self._get_interp_point(&p.0),
                     )));
                 }
                 geo_types::Geometry::MultiPoint(mp) => {
                     let mut multi_point: Vec<geo_types::Point> = Vec::with_capacity(mp.len());
                     for p in mp.iter() {
-                        multi_point.push(self.get_interp_point(&p.0).into());
+                        multi_point.push(self._get_interp_point(&p.0).into());
                     }
                     result.push(geo_types::Geometry::MultiPoint(geo_types::MultiPoint(
                         multi_point,
@@ -342,7 +354,7 @@ impl Grid {
                 geo_types::Geometry::LineString(ls) => {
                     let mut line = Vec::with_capacity(ls.0.len());
                     for p in ls.0.iter() {
-                        line.push(self.get_interp_point(p));
+                        line.push(self._get_interp_point(p));
                     }
                     result.push(geo_types::Geometry::LineString(geo_types::LineString(line)));
                 }
@@ -351,7 +363,7 @@ impl Grid {
                     for ls in mls.iter() {
                         let mut line = Vec::with_capacity(ls.0.len());
                         for p in ls.0.iter() {
-                            line.push(self.get_interp_point(p));
+                            line.push(self._get_interp_point(p));
                         }
                         multi_line.push(geo_types::LineString(line));
                     }
@@ -362,13 +374,13 @@ impl Grid {
                 geo_types::Geometry::Polygon(poly) => {
                     let mut exterior = Vec::with_capacity(poly.exterior().0.len());
                     for p in poly.exterior().0.iter() {
-                        exterior.push(self.get_interp_point(p));
+                        exterior.push(self._get_interp_point(p));
                     }
                     let mut interiors = Vec::with_capacity(poly.interiors().len());
                     for interior in poly.interiors() {
                         let mut interior_points = Vec::with_capacity(interior.0.len());
                         for p in interior.0.iter() {
-                            interior_points.push(self.get_interp_point(p));
+                            interior_points.push(self._get_interp_point(p));
                         }
                         interiors.push(interior_points.into());
                     }
@@ -382,13 +394,13 @@ impl Grid {
                     for poly in mpoly.iter() {
                         let mut exterior = Vec::with_capacity(poly.exterior().0.len());
                         for p in poly.exterior().0.iter() {
-                            exterior.push(self.get_interp_point(p));
+                            exterior.push(self._get_interp_point(p));
                         }
                         let mut interiors = Vec::with_capacity(poly.interiors().len());
                         for interior in poly.interiors() {
                             let mut interior_points = Vec::with_capacity(interior.0.len());
                             for p in interior.0.iter() {
-                                interior_points.push(self.get_interp_point(p));
+                                interior_points.push(self._get_interp_point(p));
                             }
                             interiors.push(interior_points.into());
                         }
@@ -399,32 +411,32 @@ impl Grid {
                     )));
                 }
                 geo_types::Geometry::GeometryCollection(geometries) => {
-                    result = self.interpolate_layer(&geometries.0);
+                    result = self.interpolate_layer(&geometries.0)?;
                 }
                 geo_types::Geometry::Line(l) => {
-                    let p1 = self.get_interp_point(&l.start);
-                    let p2 = self.get_interp_point(&l.end);
+                    let p1 = self._get_interp_point(&l.start);
+                    let p2 = self._get_interp_point(&l.end);
                     result.push(geo_types::Geometry::Line(geo_types::Line {
                         start: p1,
                         end: p2,
                     }));
                 }
                 geo_types::Geometry::Triangle(tri) => {
-                    let v1 = self.get_interp_point(&tri.0);
-                    let v2 = self.get_interp_point(&tri.1);
-                    let v3 = self.get_interp_point(&tri.2);
+                    let v1 = self._get_interp_point(&tri.0);
+                    let v2 = self._get_interp_point(&tri.1);
+                    let v3 = self._get_interp_point(&tri.2);
                     result.push(geo_types::Geometry::Triangle(geo_types::Triangle(
                         v1, v2, v3,
                     )));
                 }
                 geo_types::Geometry::Rect(r) => {
-                    let min = self.get_interp_point(&r.min());
-                    let max = self.get_interp_point(&r.max());
+                    let min = self._get_interp_point(&r.min());
+                    let max = self._get_interp_point(&r.max());
                     result.push(geo_types::Geometry::Rect(geo_types::Rect::new(min, max)));
                 }
             }
         }
 
-        result
+        Ok(result)
     }
 }

@@ -10,4 +10,8 @@ pub enum Error {
     #[cfg(feature = "moving-points")]
     #[error("No reference point found")]
     NoReferencePoint,
+    #[error("The provided geometries don't fall inside the bounding box of the grid")]
+    GeometriesNotInBBox,
+    #[error("The provided point don't fall inside the bounding box of the grid")]
+    PointNotInBBox,
 }

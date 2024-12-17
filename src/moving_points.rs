@@ -3,7 +3,7 @@ use crate::utils::{distance, interpolate_line, median};
 use geo_types::Coord;
 
 /// The central tendency method to use to compute the reference speed
-/// for the movement of the points.
+/// for the movement of the points in the [`move_points`] function.
 pub enum CentralTendency {
     Mean,
     Median,

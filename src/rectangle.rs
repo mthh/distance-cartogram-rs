@@ -10,6 +10,7 @@ pub(crate) struct Rectangle2D {
     width: f64,
 }
 
+#[allow(dead_code)]
 impl Rectangle2D {
     /// Create a new rectangle.
     pub fn new(x: f64, y: f64, height: f64, width: f64) -> Rectangle2D {
