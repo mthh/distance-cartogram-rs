@@ -15,6 +15,12 @@ pub enum GridType {
 
 /// The grid for interpolating and deforming geometries.
 /// Based on Waldo Tobler bidimensional regression.
+///
+/// Waldo Tobler's bidimensional regression is a statistical method
+/// used to compare two sets of spatial data by analyzing the relationship
+/// between corresponding points. It is particularly useful in geography
+/// for comparing different maps or spatial representations to understand
+/// how one dataset can be transformed to approximate another.
 pub struct Grid {
     nodes: NodeSet,
 }
@@ -67,6 +73,9 @@ impl Grid {
 
     /// Interpolate on the grid the local transformations between
     /// the source points and images_points.
+    /// This method performs bidimensional regression by iteratively
+    /// adjusting a grid of nodes to minimize the differences between
+    /// the source and image points.
     fn interpolate(&mut self, points: &[Coord], image_points: &[Coord], n_iter: usize) {
         // let rect = Rectangle2D::from_points(self.points);
         // let rect_adj = Rectangle2D::from_points(image_points);
@@ -123,6 +132,8 @@ impl Grid {
                     sqx += qx[i];
                     sqy += qy[i];
                 }
+
+                // Compute the local transformation using bilinear interpolation
                 let hx1 = ux1 / resolution * (adj_nodes[1].interp.x - adj_nodes[0].interp.x)
                     + adj_nodes[0].interp.x;
                 let hx2 = ux1 / resolution * (adj_nodes[3].interp.x - adj_nodes[2].interp.x)
@@ -153,6 +164,8 @@ impl Grid {
                 }
             }
 
+            // Smooth the grid by updating the nodes interpolated
+            // position and check for convergence
             let mut p_tmp = Coord { x: 0., y: 0. };
             for l in 0..(width * height) {
                 let mut delta = 0.0f64;
