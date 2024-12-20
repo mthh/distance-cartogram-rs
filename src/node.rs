@@ -1,6 +1,7 @@
 use crate::bbox::BBox;
 use crate::rectangle::Rectangle2D;
 use geo_types::Coord;
+use std::fmt::Debug;
 
 /// A node in the grid.
 #[derive(Debug, Clone)]
@@ -243,5 +244,16 @@ impl NodeSet {
                 y: sy / nb as f64,
             }
         }
+    }
+}
+
+impl Debug for NodeSet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NodeSet")
+            .field("zone", &self.zone)
+            .field("resolution", &self.resolution)
+            .field("width", &self.width)
+            .field("height", &self.height)
+            .finish()
     }
 }

@@ -1,10 +1,11 @@
-use std::fmt::Debug;
 use crate::bbox::BBox;
 use crate::errors::Error;
 use crate::node::NodeSet;
 use crate::rectangle::Rectangle2D;
+use crate::utils;
 use crate::utils::distance_sq;
 use geo_types::Coord;
+use std::fmt::Debug;
 
 /// The type of grid to retrieve (source or interpolated,
 /// see [`Grid::get_grid`](Grid::get_grid) method).
@@ -25,14 +26,22 @@ pub enum GridType {
 pub struct Grid {
     nodes: NodeSet,
     interpolated_points: Vec<Coord>,
+    mae: f64,
+    rmse: f64,
+    r_squared: f64,
 }
 
 impl Grid {
     /// Create a new grid which covers the source points and with a cell size
-    /// deduced from the precision. The grid is then interpolated to match the
-    /// image points. This then allows to interpolate any point on the grid
+    /// deduced from the precision.
+    /// During its creation, the nodes of the grid will be adjusted
+    /// to minimize the differences between the source and the image points
+    /// using Waldo Tobler's bidimensional regression.
+    ///
+    /// This then allows to interpolate any point on the grid
     /// (enabling the deformation of geometries such as background layers)
-    /// and to retrieve useful metrics about the deformation.
+    /// and to retrieve useful metrics about the deformation (MAE, RMSE,
+    /// R-squared and deformation strength).
     ///
     /// If the bbox is not provided, the grid dimension will be deduced from
     /// the source points.
@@ -46,8 +55,8 @@ impl Grid {
     ///
     /// The number of iterations controls the number of iterations for the
     /// interpolation. It is generally 4 times the square root of the number of
-    /// points (see [`get_nb_iterations`] helper function for computing it from
-    /// the number of points).
+    /// points (see [`get_nb_iterations`](crate::utils::get_nb_iterations)
+    /// helper function for computing it from the number of points).
     ///
     /// Note that the number of source points must be equal to the number of
     /// image points, and they must be given in the same order (as they are
@@ -68,7 +77,13 @@ impl Grid {
             nodes.set_weight_adjacent_nodes(p, 1.0);
         }
 
-        let mut g = Grid { nodes, interpolated_points: vec![] };
+        let mut g = Grid {
+            nodes,
+            interpolated_points: vec![],
+            mae: 0.0,
+            rmse: 0.0,
+            r_squared: 0.0,
+        };
         g.interpolate(source_points, image_points, n_iter);
         Ok(g)
     }
@@ -191,6 +206,9 @@ impl Grid {
         }
 
         self.interpolated_points = points.iter().map(|p| self._get_interp_point(p)).collect();
+        self.mae = utils::mae(image_points, &self.interpolated_points);
+        self.rmse = utils::rmse(image_points, &self.interpolated_points);
+        self.r_squared = utils::r_squared(image_points, &self.interpolated_points);
     }
 
     /// Interpolate the point src_point on the transformed grid.
@@ -457,9 +475,46 @@ impl Grid {
         Ok(result)
     }
 
-    /// Retrieve the interpolated points
-    /// (useful for computing metrics like R² or MAE)
+    /// Retrieve the interpolated points (can be useful for debugging
+    /// or computing metrics other than the default ones).
     pub fn interpolated_points(&self) -> &[Coord] {
         &self.interpolated_points
+    }
+
+    /// Retrieve the Mean Absolute Error (MAE) between the image points
+    /// and the interpolated points.
+    /// It measures the average magnitude of the errors in a set of predictions,
+    /// without considering their direction.
+    pub fn mae(&self) -> f64 {
+        self.mae
+    }
+
+    /// Retrieve the Root Mean Squared Error (RMSE) between the image points
+    /// and the interpolated points.
+    /// It measures differences between predicted values and observed values
+    /// and gives an idea of the overall accuracy of the regression.
+    pub fn rmse(&self) -> f64 {
+        self.rmse
+    }
+
+    /// Retrieve the R-squared value between the image points
+    /// and the interpolated points.
+    /// It measures the proportion of the variance in the dependent variable
+    /// that is predictable from the independent variable(s).
+    /// It provides an indication of the goodness of fit of the points to the grid.
+    /// The R-squared value is between 0 and 1, where 1 indicates a perfect fit.
+    pub fn r_squared(&self) -> f64 {
+        self.r_squared
+    }
+}
+
+impl Debug for Grid {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Grid")
+            .field("nodes", &self.nodes)
+            .field("mae", &self.mae)
+            .field("rmse", &self.rmse)
+            .field("r_squared", &self.r_squared)
+            .finish()
     }
 }

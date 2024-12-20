@@ -18,9 +18,9 @@ pub fn get_nb_iterations(nb_points: usize) -> usize {
 /// Compute the Root Mean Square Error (RMSE).
 /// It measures differences between predicted values and observed values
 /// and gives an idea of the overall accuracy of the regression.
-pub fn rmse(points: &[Coord], image_points: &[Coord], interpolated_points: &[Coord]) -> f64 {
+pub(crate) fn rmse(image_points: &[Coord], interpolated_points: &[Coord]) -> f64 {
     let mut sum_sq_error = 0.0;
-    let n = points.len();
+    let n = image_points.len();
     for i in 0..n {
         let dx = image_points[i].x - interpolated_points[i].x;
         let dy = image_points[i].y - interpolated_points[i].y;
@@ -29,14 +29,13 @@ pub fn rmse(points: &[Coord], image_points: &[Coord], interpolated_points: &[Coo
     (sum_sq_error / n as f64).sqrt()
 }
 
-
 /// Compute the R-squared value. It measures the proportion of the variance
 /// in the dependent variable that is predictable from the independent variable(s).
 /// It provides an indication of the goodness of fit of the points to the grid.
-pub fn r_squared(points: &[Coord], image_points: &[Coord], interpolated_points: &[Coord]) -> f64 {
+pub(crate) fn r_squared(image_points: &[Coord], interpolated_points: &[Coord]) -> f64 {
     let mut ss_total = 0.0;
     let mut ss_residual = 0.0;
-    let n = points.len();
+    let n = image_points.len();
     let mean_x = image_points.iter().map(|p| p.x).sum::<f64>() / n as f64;
     let mean_y = image_points.iter().map(|p| p.y).sum::<f64>() / n as f64;
 
@@ -53,13 +52,12 @@ pub fn r_squared(points: &[Coord], image_points: &[Coord], interpolated_points: 
     1.0 - (ss_residual / ss_total)
 }
 
-
 /// Compute the Mean Absolute Error (MAE).
 /// It measures the average magnitude of the errors in a set of predictions,
 /// without considering their direction.
-pub fn mae(points: &[Coord], image_points: &[Coord], interpolated_points: &[Coord]) -> f64 {
+pub(crate) fn mae(image_points: &[Coord], interpolated_points: &[Coord]) -> f64 {
     let mut sum_abs_error = 0.0;
-    let n = points.len();
+    let n = image_points.len();
     for i in 0..n {
         let dx = (image_points[i].x - interpolated_points[i].x).abs();
         let dy = (image_points[i].y - interpolated_points[i].y).abs();
