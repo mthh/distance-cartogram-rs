@@ -1,4 +1,4 @@
-use distance_cartogram::{get_nb_iterations, BBox, Grid, GridType};
+use distance_cartogram::{utils, BBox, Grid, GridType};
 use geo_types::Coord;
 use geojson::{Feature, FeatureCollection, GeoJson, Geometry, Value};
 use std::io::Write;
@@ -140,15 +140,22 @@ pub fn main() {
     println!("BBox computation: {:?}", t.elapsed());
 
     // How much iterations to perform
-    let n_iter = get_nb_iterations(points_source.len());
+    let n_iter = utils::get_nb_iterations(points_source.len());
 
     // Actual grid computation
     let t = Instant::now();
     let grid = Grid::new(&points_source, &points_image, 2., n_iter, Some(bbox))
         .expect("Unable to create grid");
     println!(
-        "Grid creation and initial interpolation step: {:?}",
+        "Grid creation, bidimensional regression step and metric computation: {:?}",
         t.elapsed()
+    );
+    println!(
+        "↳ MAE: {}, RMSE: {}, R-squared: {}, Deformation strength: {}",
+        grid.mae(),
+        grid.rmse(),
+        grid.r_squared(),
+        grid.deformation_strength()
     );
 
     // Transform the background layer
