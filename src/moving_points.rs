@@ -83,17 +83,15 @@ pub fn move_points(
     // Reconstruction of the points (taking care of the reference point).
     let mut new_points = Vec::with_capacity(source_points.len());
 
-    for (i, (pt, t, dist, speed, displacement)) in pt_times_displacement.into_iter().enumerate() {
+    for (pt, t, dist, speed, displacement) in pt_times_displacement.into_iter() {
         // Combine the factor and the computed displacement value
         let d = 1. + (displacement - 1.) * factor;
         // Actually compute the position of the moved point
         new_points.push(interpolate_line(ref_point, pt, d * dist));
-        // Add the reference point at the right index
-        // to return the points in the same order as the input.
-        if i == idx {
-            new_points.push(*ref_point);
-        }
     }
+
+    // Add the reference point at the right index
+    new_points.insert(idx, *ref_point);
 
     Ok(new_points)
 }
