@@ -9,8 +9,11 @@ pub(crate) struct Node {
     pub i: usize,
     /// Position on the grid (column)
     pub j: usize,
+    /// Coordinates of the node on the source grid
     pub source: Coord,
+    /// Coordinates of the node on the interpolated grid
     pub interp: Coord,
+    /// Weight of the node
     pub weight: f64,
 }
 

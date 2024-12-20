@@ -5,8 +5,8 @@ pub enum Error {
     #[error("The number of source points and image points must be equal")]
     InvalidInputPointsLength,
     #[cfg(feature = "moving-points")]
-    #[error("The number of source points and time measurements must be equal")]
-    InvalidInputTimesLength,
+    #[error("The number of source points and duration measurements must be equal")]
+    InvalidInputDurationsLength,
     #[cfg(feature = "moving-points")]
     #[error("No reference point found")]
     NoReferencePoint,

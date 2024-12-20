@@ -24,34 +24,34 @@ pub enum CentralTendency {
 /// value to use and a larger factor will move the points further
 /// away).
 ///
-/// Note that the source points and the times must have the same length
-/// and that there must be a reference point for which the time is 0.
+/// Note that the source points and the durations must have the same length
+/// and that there must be a reference point for which the duration is 0.
 /// If one of these conditions is not met, an error is returned.
 pub fn move_points(
     source_points: &[Coord],
-    times: &[f64],
+    durations: &[f64],
     factor: f64,
     method: CentralTendency,
 ) -> Result<Vec<Coord>, Error> {
-    if source_points.len() != times.len() {
-        return Err(Error::InvalidInputTimesLength);
+    if source_points.len() != durations.len() {
+        return Err(Error::InvalidInputDurationsLength);
     }
-    // Find the index for which the time is 0,
+    // Find the index for which the duration is 0,
     // this will be our reference points for the movement
     // of the other points.
     // If there is none, this is an error and we return.
-    let idx = times
+    let idx = durations
         .iter()
         .position(|&t| t == 0.0)
         .ok_or(Error::NoReferencePoint)?;
 
     let ref_point = &source_points[idx];
     // Get all the points that are not the reference point
-    // associated with their time.
-    // So we have (point, time, distance, speed).
+    // associated with their duration.
+    // So we have (point, duration, distance, speed).
     let pt_time: Vec<(&Coord, f64, f64, f64)> = source_points
         .iter()
-        .zip(times.iter())
+        .zip(durations.iter())
         .filter(|(_, &t)| t != 0.0)
         .map(|(pt, &t)| {
             let dist = distance(ref_point, pt);
@@ -74,16 +74,16 @@ pub fn move_points(
     };
 
     // Get the displacement factor for each point given the reference speed.
-    // So we have (point, time, distance, speed, displacement).
+    // So we have (point, duration, distance, speed, displacement).
     let pt_times_displacement: Vec<(&Coord, f64, f64, f64, f64)> = pt_time
         .iter()
-        .map(|&(pt, t, dist, speed)| (pt, t, dist, speed, ref_speed / speed))
+        .map(|&(pt, d, dist, speed)| (pt, d, dist, speed, ref_speed / speed))
         .collect();
 
     // Reconstruction of the points (taking care of the reference point).
     let mut new_points = Vec::with_capacity(source_points.len());
 
-    for (pt, t, dist, speed, displacement) in pt_times_displacement.into_iter() {
+    for (pt, _d, dist, _speed, displacement) in pt_times_displacement.into_iter() {
         // Combine the factor and the computed displacement value
         let d = 1. + (displacement - 1.) * factor;
         // Actually compute the position of the moved point

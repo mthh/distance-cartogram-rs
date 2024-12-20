@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use crate::bbox::BBox;
 use crate::errors::Error;
 use crate::node::NodeSet;
@@ -23,6 +24,7 @@ pub enum GridType {
 /// how one dataset can be transformed to approximate another.
 pub struct Grid {
     nodes: NodeSet,
+    interpolated_points: Vec<Coord>,
 }
 
 impl Grid {
@@ -66,7 +68,7 @@ impl Grid {
             nodes.set_weight_adjacent_nodes(p, 1.0);
         }
 
-        let mut g = Grid { nodes };
+        let mut g = Grid { nodes, interpolated_points: vec![] };
         g.interpolate(source_points, image_points, n_iter);
         Ok(g)
     }
@@ -187,6 +189,8 @@ impl Grid {
                 }
             }
         }
+
+        self.interpolated_points = points.iter().map(|p| self._get_interp_point(p)).collect();
     }
 
     /// Interpolate the point src_point on the transformed grid.
@@ -451,5 +455,11 @@ impl Grid {
         }
 
         Ok(result)
+    }
+
+    /// Retrieve the interpolated points
+    /// (useful for computing metrics like R² or MAE)
+    pub fn interpolated_points(&self) -> &[Coord] {
+        &self.interpolated_points
     }
 }

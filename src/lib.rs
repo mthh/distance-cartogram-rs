@@ -6,11 +6,12 @@ mod grid;
 mod moving_points;
 mod node;
 mod rectangle;
-mod utils;
+
+/// Useful utilities for working with the interpolation grid.
+pub mod utils;
 
 pub use bbox::BBox;
 pub use grid::{Grid, GridType};
-pub use utils::get_nb_iterations;
 
 #[cfg(feature = "moving-points")]
 pub use moving_points::move_points;
