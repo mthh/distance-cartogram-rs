@@ -107,6 +107,7 @@ impl NodeSet {
         }
     }
 
+    #[inline]
     pub fn is_in_grid(&self, i: isize, j: isize) -> bool {
         i < self.height as isize && j < self.width as isize && i >= 0 && j >= 0
     }
@@ -119,10 +120,12 @@ impl NodeSet {
         &mut self.nodes[i * self.width + j]
     }
 
+    #[inline]
     fn get_i(&self, p: &Coord) -> usize {
         ((self.zone.max_y() - p.y) / self.resolution).floor() as usize
     }
 
+    #[inline]
     fn get_j(&self, p: &Coord) -> usize {
         ((p.x - self.zone.min_x()) / self.resolution).floor() as usize
     }
