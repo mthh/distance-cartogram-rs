@@ -40,7 +40,7 @@ impl Grid {
     ///
     /// This then allows to interpolate any point on the grid
     /// (enabling the deformation of geometries such as background layers)
-    /// and to retrieve useful metrics about the deformation (MAE, RMSE,
+    /// and to retrieve useful metrics about the regression (MAE, RMSE,
     /// R-squared and deformation strength).
     ///
     /// If the bbox is not provided, the grid dimension will be deduced from
@@ -52,6 +52,10 @@ impl Grid {
     /// for example 0.5 generally gives a coarse result, 2 a satisfactory result
     /// and 4 a particularly fine result). A precision of 2 is usually a good
     /// default value.
+    /// Internally, the precision is the α value used to compute the resolution
+    /// of the grid : `resolution = sqrt((dx * dy) / n) * α` (where dx and dy
+    /// are the width and height of the bounding box, and n is the number of
+    /// source points).
     ///
     /// The number of iterations controls the number of iterations for the
     /// interpolation. It is generally 4 times the square root of the number of
