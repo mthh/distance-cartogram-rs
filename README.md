@@ -37,9 +37,9 @@ in order to get the *image points* that can be used with the `Grid` struct to cr
 
 See the examples in the [`examples`](./examples) directory for more details:
 
-- `cargo run --example from-2-point-layers --release`
-- `cargo run --example from-reference-point-and-durations --features moving-points-unipolar --release`
-- `cargo run --example from-points-and-durations-matrix --features moving-points-multipolar --release`
+- from two sets of points: [`from-2-point-layers`](./examples/from-2-point-layers.rs) (`cargo run --example from-2-point-layers --release`), demonstrating the `Grid` core feature.
+- from a reference point and durations: [`from-reference-point-and-durations`](./examples/from-reference-point-and-durations.rs) (`cargo run --example from-reference-point-and-durations --features moving-points-unipolar --release`), demonstrating the `move_points` function then the `Grid` core feature.
+- from points and durations matrix: [`from-points-and-durations-matrix`](./examples/from-points-and-durations-matrix.rs) (`cargo run --example from-points-and-durations-matrix --features moving-points-multipolar --release`), demonstrating the `generate_positions_from_durations` function then the `Grid` core feature.
 
 _**From R**_:
 
