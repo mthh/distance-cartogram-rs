@@ -1,3 +1,4 @@
+use crate::errors::Error;
 use crate::procrustes;
 use pcoa::{apply_pcoa, nalgebra::DMatrix};
 
@@ -7,15 +8,15 @@ use pcoa::{apply_pcoa, nalgebra::DMatrix};
 pub fn generate_positions_from_durations(
     durations: Vec<Vec<f64>>,
     reference_points: &[geo_types::Coord<f64>],
-) -> Vec<geo_types::Coord<f64>> {
+) -> Result<Vec<geo_types::Coord<f64>>, Error> {
     let m = durations.len();
-    for i in 0..m {
-        if durations[i].len() != m {
-            panic!("The duration matrix is not square");
+    for item in durations.iter() {
+        if item.len() != m {
+            return Err(Error::DurationMatrixNotSquare);
         }
     }
     if durations.len() != reference_points.len() {
-        panic!("The number of rows in the duration matrix must be equal to the number of reference points");
+        return Err(Error::InvalidInputDurationsDimensions);
     }
     let n_dims = 2;
     let flat_mat = durations
@@ -23,7 +24,7 @@ pub fn generate_positions_from_durations(
         .flat_map(|x| x.iter().copied())
         .collect::<Vec<_>>();
     let distance_matrix = DMatrix::from_column_slice(m, m, &flat_mat);
-    let coords_matrix = apply_pcoa(distance_matrix, n_dims).expect("cannot apply PCoA");
+    let coords_matrix = apply_pcoa(distance_matrix, n_dims).ok_or(Error::PCoAUnsuccessful)?;
     let coords_matrix = coords_matrix.transpose();
     let xs: Vec<_> = coords_matrix.column(0).iter().copied().collect();
     let ys: Vec<_> = coords_matrix.column(1).iter().copied().collect();
@@ -32,5 +33,6 @@ pub fn generate_positions_from_durations(
         .zip(ys.iter())
         .map(|(x, y)| geo_types::Coord { x: *x, y: *y })
         .collect::<Vec<_>>();
-    procrustes::procrustes(reference_points, &points_target).points
+    let proc_res = procrustes::procrustes(reference_points, &points_target)?;
+    Ok(proc_res.points)
 }

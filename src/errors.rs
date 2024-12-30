@@ -14,4 +14,16 @@ pub enum Error {
     GeometriesNotInBBox,
     #[error("The provided point don't fall inside the bounding box of the grid")]
     PointNotInBBox,
+    #[cfg(feature = "moving-points-multipolar")]
+    #[error("The duration matrix is not square")]
+    DurationMatrixNotSquare,
+    #[cfg(feature = "moving-points-multipolar")]
+    #[error("The number of source points and the duration matrix dimensions (rows and columns) must be equal")]
+    InvalidInputDurationsDimensions,
+    #[cfg(feature = "moving-points-multipolar")]
+    #[error("An error occurred during the PCoA analysis")]
+    PCoAUnsuccessful,
+    #[cfg(feature = "moving-points-multipolar")]
+    #[error("The two sets of input points for Procrustes analysis must have the same length")]
+    ProcrustesInputLengthMismatch,
 }

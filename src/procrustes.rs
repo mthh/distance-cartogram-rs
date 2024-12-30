@@ -1,3 +1,4 @@
+use crate::errors::Error;
 use geo_types::Coord;
 
 /// Compute the centroid of a set of points.
@@ -89,12 +90,10 @@ pub struct ProcrustesResult {
 /// This is a naive version of the ordinary/classical Procrustes analysis (as described on
 /// https://en.wikipedia.org/wiki/Procrustes_analysis#Ordinary_Procrustes_analysis) that only
 /// deals with translation, rotation and scaling (i.e. it does not handle reflection yet).
-pub(crate) fn procrustes(points1: &[Coord], points2: &[Coord]) -> ProcrustesResult {
-    assert_eq!(
-        points1.len(),
-        points2.len(),
-        "The two sets of points must have the same size"
-    );
+pub(crate) fn procrustes(points1: &[Coord], points2: &[Coord]) -> Result<ProcrustesResult, Error> {
+    if points1.len() != points2.len() {
+        return Err(Error::ProcrustesInputLengthMismatch);
+    }
 
     // Compute the centroid of each set of points
     // and center the points around the centroid
@@ -139,7 +138,7 @@ pub(crate) fn procrustes(points1: &[Coord], points2: &[Coord]) -> ProcrustesResu
         })
         .collect();
 
-    ProcrustesResult {
+    Ok(ProcrustesResult {
         points: pts,
         angle,
         scale: norm1 / norm2,
@@ -148,5 +147,5 @@ pub(crate) fn procrustes(points1: &[Coord], points2: &[Coord]) -> ProcrustesResu
             y: centroid1.y - centroid2.y,
         },
         error,
-    }
+    })
 }

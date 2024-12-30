@@ -23,7 +23,7 @@ fn main() {
         GeoJson::from_reader(&file_source).expect("Unable to read file of source points");
     let geojson_background =
         GeoJson::from_reader(&file_background).expect("Unable to read file of layer to deform");
-    let (durations, ids) = utils::read_csv(file_durations);
+    let (durations, _ids) = utils::read_csv(file_durations);
 
     // Read the background layer.
     // We want to read the foreign members of the GeoJson FeatureCollection
@@ -77,7 +77,8 @@ fn main() {
     };
 
     let t = Instant::now();
-    let points_image = generate_positions_from_durations(durations, &points_source);
+    let points_image = generate_positions_from_durations(durations, &points_source)
+        .expect("Unable to generate positions from durations");
     println!("Moving points: {:?}", t.elapsed());
 
     let mut features = Vec::new();

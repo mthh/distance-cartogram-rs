@@ -21,7 +21,9 @@ mod moving_points_unipolar;
 mod node;
 mod rectangle;
 
+#[cfg(feature = "moving-points-multipolar")]
 mod procrustes;
+
 /// Useful utilities for working with the interpolation grid.
 pub mod utils;
 
