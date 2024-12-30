@@ -147,7 +147,7 @@ fn main() {
         t.elapsed()
     );
     println!(
-        "↳ MAE: {}, RMSE: {}, R-squared: {}, Deformation strength: {}",
+        "  ↳ MAE: {}, RMSE: {}, R-squared: {}, Deformation strength: {}",
         grid.mae(),
         grid.rmse(),
         grid.r_squared(),
