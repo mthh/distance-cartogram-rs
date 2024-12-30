@@ -16,18 +16,25 @@ mod bbox;
 mod errors;
 mod grid;
 
-#[cfg(feature = "moving-points")]
-mod moving_points;
+#[cfg(feature = "moving-points-unipolar")]
+mod moving_points_unipolar;
 mod node;
 mod rectangle;
 
+mod procrustes;
 /// Useful utilities for working with the interpolation grid.
 pub mod utils;
+
+#[cfg(feature = "moving-points-unipolar")]
+mod moving_points_multipolar;
 
 pub use bbox::BBox;
 pub use grid::{Grid, GridType};
 
-#[cfg(feature = "moving-points")]
-pub use moving_points::move_points;
-#[cfg(feature = "moving-points")]
-pub use moving_points::CentralTendency;
+#[cfg(feature = "moving-points-unipolar")]
+pub use moving_points_unipolar::move_points;
+#[cfg(feature = "moving-points-unipolar")]
+pub use moving_points_unipolar::CentralTendency;
+
+#[cfg(feature = "moving-points-multipolar")]
+pub use moving_points_multipolar::generate_positions_from_durations;

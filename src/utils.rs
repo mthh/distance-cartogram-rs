@@ -4,7 +4,7 @@ pub(crate) fn distance_sq(p1: &Coord, p2: &Coord) -> f64 {
     (p1.x - p2.x).powi(2) + (p1.y - p2.y).powi(2)
 }
 
-#[cfg(feature = "moving-points")]
+#[cfg(feature = "moving-points-unipolar")]
 pub(crate) fn distance(p1: &Coord, p2: &Coord) -> f64 {
     distance_sq(p1, p2).sqrt()
 }
@@ -66,7 +66,7 @@ pub(crate) fn mae(image_points: &[Coord], interpolated_points: &[Coord]) -> f64 
     sum_abs_error / n as f64
 }
 
-#[cfg(feature = "moving-points")]
+#[cfg(feature = "moving-points-unipolar")]
 pub(crate) fn interpolate_line(p1: &Coord, p2: &Coord, distance_along_line: f64) -> Coord {
     let total_distance = distance(p1, p2);
     if total_distance == 0. {
@@ -82,7 +82,7 @@ pub(crate) fn interpolate_line(p1: &Coord, p2: &Coord, distance_along_line: f64)
     }
 }
 
-#[cfg(feature = "moving-points")]
+#[cfg(feature = "moving-points-unipolar")]
 pub(crate) fn median(mut series: Vec<f64>) -> f64 {
     series.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let mid = series.len() / 2;
