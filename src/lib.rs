@@ -25,7 +25,7 @@ mod procrustes;
 /// Useful utilities for working with the interpolation grid.
 pub mod utils;
 
-#[cfg(feature = "moving-points-unipolar")]
+#[cfg(feature = "moving-points-multipolar")]
 mod moving_points_multipolar;
 
 pub use bbox::BBox;

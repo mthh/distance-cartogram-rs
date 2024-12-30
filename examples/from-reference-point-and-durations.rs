@@ -114,9 +114,9 @@ fn main() {
     };
 
     let mut file =
-        std::fs::File::create("/tmp/moved_points.geojson").expect("Unable to create file");
+        std::fs::File::create("examples/moved-points.geojson").expect("Unable to create file");
     file.write_all(feature_collection.to_string().as_bytes())
-        .expect("Unable to write file /tmp/moved_points.geojson");
+        .expect("Unable to write file examples/moved-points.geojson");
 
     // Read the background layer
     // Extract properties and geometries from the background layer
@@ -135,7 +135,7 @@ fn main() {
     println!("BBox computation: {:?}", t.elapsed());
 
     // Prepare the grid for the cartogram
-    // How much iterations to perform
+    // How many iterations to perform
     let n_iter = utils::get_nb_iterations(points_source.len());
 
     // Actual grid computation

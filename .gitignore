@@ -5,3 +5,4 @@
 examples/data-transformed.geojson
 examples/grid-source.geojson
 examples/grid-interpolated.geojson
+examples/moved-points.geojson

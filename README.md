@@ -38,8 +38,8 @@ in order to get the *image points* that can be used with the `Grid` struct to cr
 See the examples in the [`examples`](./examples) directory for more details:
 
 - `cargo run --example from-2-point-layers --release`
-- `cargo run --example from-points-and-durations --features moving-points --release`
-- `cargo run --example from-points-and-duration-matrix --features moving-points-multipolar --release`
+- `cargo run --example from-reference-point-and-durations --features moving-points-unipolar --release`
+- `cargo run --example from-points-and-durations-matrix --features moving-points-multipolar --release`
 
 _**From R**_:
 
