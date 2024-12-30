@@ -92,3 +92,37 @@ pub(crate) fn median(mut series: Vec<f64>) -> f64 {
         series[mid]
     }
 }
+
+#[cfg(feature = "moving-points-multipolar")]
+/// Read a CSV file containing a duration matrix (so the first line is the header
+/// and the first column is the row names). The header and the row names have to be
+/// identical.
+/// The function returns a tuple containing the matrix and the row names.
+///
+/// An example of a valid CSV file for this function is:
+/// ```
+/// ,A,B,C
+/// A,0,1,2
+/// B,1,0,3
+/// C,2,3,0
+/// ```
+pub fn read_csv(file: std::fs::File) -> (Vec<Vec<f64>>, Vec<String>) {
+    let mut rdr = csv::Reader::from_reader(file);
+    let headers = rdr.headers().unwrap();
+    let headers = headers
+        .iter()
+        .skip(1)
+        .map(|x| x.to_string())
+        .collect::<Vec<String>>();
+    let mut data = Vec::new();
+    for result in rdr.records() {
+        let record = result.unwrap();
+        let row: Vec<f64> = record
+            .iter()
+            .skip(1)
+            .map(|x| x.parse::<f64>().unwrap())
+            .collect();
+        data.push(row);
+    }
+    (data, headers)
+}
