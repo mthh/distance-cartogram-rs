@@ -77,9 +77,18 @@ fn main() {
     };
 
     let t = Instant::now();
-    let points_image = generate_positions_from_durations(durations, &points_source)
+    let positioning_result = generate_positions_from_durations(durations, &points_source)
         .expect("Unable to generate positions from durations");
-    println!("Moving points: {:?}", t.elapsed());
+    println!("Generating points from durations matrix: {:?}", t.elapsed());
+    println!(
+        "  ↳ Rotation angle: {}, Scale: {}, Translation: [{}, {}], Error (procrustes distance): {}",
+        positioning_result.angle,
+        positioning_result.scale,
+        positioning_result.translation.x,
+        positioning_result.translation.y,
+        positioning_result.error,
+    );
+    let points_image = positioning_result.points;
 
     let mut features = Vec::new();
     for (i, pt) in points_image.iter().enumerate() {
