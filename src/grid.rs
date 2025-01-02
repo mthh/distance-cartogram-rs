@@ -5,6 +5,7 @@ use crate::rectangle::Rectangle2D;
 use crate::utils;
 use crate::utils::distance_sq;
 use geo_types::Coord;
+#[cfg(feature = "parallel")]
 use rayon::prelude::*;
 use std::fmt::Debug;
 
