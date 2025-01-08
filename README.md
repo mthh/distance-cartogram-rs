@@ -1,6 +1,7 @@
 # Distance-cartogram-rs
 
-A Rust implementation of distance cartogram (based on Waldo Tobler's bidimensional regression) to be used to create a fast distance cartogram package for R.
+A Rust implementation of distance cartogram (based on Waldo Tobler and Caulette Cauvin work) to be used
+to create a fast distance cartogram package for R.
 
 
 > **Notes**:
