@@ -27,6 +27,7 @@ mod procrustes;
 /// Useful utilities for working with the interpolation grid.
 pub mod utils;
 
+pub mod adjustment;
 #[cfg(feature = "moving-points-multipolar")]
 mod moving_points_multipolar;
 
