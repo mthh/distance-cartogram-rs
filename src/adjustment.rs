@@ -13,8 +13,6 @@ pub struct TransformationMatrix {
     pub a21: f64,
     pub a22: f64,
     pub a23: f64,
-    pub angle: f64,
-    pub scale: f64,
     pub adjusted_points: Vec<Coord>,
 }
 
@@ -67,8 +65,8 @@ pub fn adjust(
             for (src, img) in source_points.iter().zip(image_points.iter()) {
                 num1 += (src.0 - src_mean_x) * (img.0 - img_mean_x)
                     + (src.1 - src_mean_y) * (img.1 - img_mean_y);
-                num2 += (src.0 - src_mean_y) * (img.1 - img_mean_y)
-                    - (src.1 - src_mean_x) * (img.0 - img_mean_x);
+                num2 += (src.0 - src_mean_x) * (img.1 - img_mean_y)
+                    - (src.1 - src_mean_y) * (img.0 - img_mean_x);
                 denom += (img.0 - img_mean_x).powi(2)
                     + (img.1 - img_mean_y).powi(2);
             }
@@ -123,9 +121,6 @@ pub fn adjust(
         })
         .collect();
 
-    let scale = ((a11 * a11 + a21 * a21) + (a12 * a12 + a22 * a22)).sqrt();
-    let angle = a11.atan2(a21);
-
     Ok(TransformationMatrix {
         a11,
         a12,
@@ -133,8 +128,6 @@ pub fn adjust(
         a21,
         a22,
         a23,
-        angle,
-        scale,
         adjusted_points,
     })
 }
