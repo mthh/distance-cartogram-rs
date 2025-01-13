@@ -6,6 +6,46 @@ pub enum AdjustmentType {
     Euclidean,
 }
 
+fn getScale(scale_x: f64, shear_x: f64, scale_y: f64, shear_y: f64) -> f64 {
+    let scale_x0 = if shear_x == 0.0 {
+        scale_x.abs()
+    } else if scale_x == 0.0 {
+        shear_x.abs()
+    } else {
+        (scale_x * scale_x + shear_x * shear_x).sqrt()
+    };
+
+    let scale_y0 = if shear_y == 0.0 {
+        scale_y.abs()
+    } else if scale_y == 0.0 {
+        shear_y.abs()
+    } else {
+        (scale_y * scale_y + shear_y * shear_y).sqrt()
+    };
+
+    0.5 * (scale_x0 + scale_y0)
+}
+
+fn getRotation(scale_x: f64, shear_x: f64, scale_y: f64, shear_y: f64) -> f64 {
+    let scale_x0 = if shear_x == 0.0 {
+        scale_x.abs()
+    } else if scale_x == 0.0 {
+        shear_x.abs()
+    } else {
+        (scale_x * scale_x + shear_x * shear_x).sqrt()
+    };
+
+    let scale_y0 = if shear_y == 0.0 {
+        scale_y.abs()
+    } else if scale_y == 0.0 {
+        shear_y.abs()
+    } else {
+        (scale_y * scale_y + shear_y * shear_y).sqrt()
+    };
+
+    (shear_y / scale_y0 - shear_x / scale_x0).atan2(scale_y / scale_y0 + scale_x / scale_x0)
+}
+
 pub struct TransformationMatrix {
     pub a11: f64,
     pub a12: f64,
@@ -13,7 +53,24 @@ pub struct TransformationMatrix {
     pub a21: f64,
     pub a22: f64,
     pub a23: f64,
-    pub adjusted_points: Vec<Coord>,
+    pub scale: f64,
+    pub angle: f64,
+    pub points_adjusted: Vec<Coord>,
+}
+
+impl std::fmt::Debug for TransformationMatrix {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TransformationMatrix")
+            .field("a11", &self.a11)
+            .field("a12", &self.a12)
+            .field("a13", &self.a13)
+            .field("a21", &self.a21)
+            .field("a22", &self.a22)
+            .field("a23", &self.a23)
+            .field("scale", &self.scale)
+            .field("angle", &self.angle)
+            .finish()
+    }
 }
 
 pub fn adjust(
@@ -21,12 +78,12 @@ pub fn adjust(
     image_points: &[Coord],
     adjustment_type: AdjustmentType,
 ) -> Result<TransformationMatrix, Error> {
-    let source_points: Vec<_> = source_points.iter().map(|p| (p.x, p.y)).collect();
-    let image_points: Vec<_> = image_points.iter().map(|p| (p.x, p.y)).collect();
+    let source_pts: Vec<_> = source_points.iter().map(|p| (p.x, p.y)).collect();
+    let image_pts: Vec<_> = image_points.iter().map(|p| (p.x, p.y)).collect();
 
-    let n = source_points.len();
+    let n = source_pts.len();
 
-    if n != image_points.len() {
+    if n != image_pts.len() {
         return Err(Error::InvalidInputPointsLength);
     }
 
@@ -36,7 +93,7 @@ pub fn adjust(
     let mut img_mean_x = 0.0;
     let mut img_mean_y = 0.0;
 
-    for (src, img) in source_points.iter().zip(image_points.iter()) {
+    for (src, img) in source_pts.iter().zip(image_pts.iter()) {
         src_mean_x += src.0;
         src_mean_y += src.1;
         img_mean_x += img.0;
@@ -55,7 +112,7 @@ pub fn adjust(
             let mut num2 = 0.0;
             let mut denom = 0.0;
 
-            for (src, img) in source_points.iter().zip(image_points.iter()) {
+            for (src, img) in source_pts.iter().zip(image_pts.iter()) {
                 num1 += (src.0 - src_mean_x) * (img.0 - img_mean_x)
                     + (src.1 - src_mean_y) * (img.1 - img_mean_y);
                 num2 += (src.0 - src_mean_x) * (img.1 - img_mean_y)
@@ -80,7 +137,7 @@ pub fn adjust(
             let mut yu = 0.0;
             let mut yv = 0.0;
 
-            for (src, img) in source_points.iter().zip(image_points.iter()) {
+            for (src, img) in source_pts.iter().zip(image_pts.iter()) {
                 let u = img.0 - img_mean_x;
                 let v = img.1 - img_mean_y;
                 let x = src.0 - src_mean_x;
@@ -106,14 +163,16 @@ pub fn adjust(
     };
 
     // Compute adjusted points
-    let adjusted_points = image_points
+    let adjusted_points = image_pts
         .iter()
-        .map(|(x, y)| {
-            let x = a11 * x + a12 * y + a13;
-            let y = a21 * x + a22 * y + a23;
-            Coord { x, y }
+        .map(|(cx, cy)| Coord {
+            x: cx * a11 + cy * a12 + a13,
+            y: cx * a21 + cy * a22 + a23,
         })
         .collect();
+
+    let scale = getScale(a11, a12, a22, a21);
+    let angle = getRotation(a11, a12, a22, a21).to_degrees();
 
     Ok(TransformationMatrix {
         a11,
@@ -122,6 +181,8 @@ pub fn adjust(
         a21,
         a22,
         a23,
-        adjusted_points,
+        scale,
+        angle,
+        points_adjusted: adjusted_points,
     })
 }
