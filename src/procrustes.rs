@@ -137,7 +137,7 @@ pub(crate) fn procrustes(points1: &[Coord], points2: &[Coord]) -> Result<Procrus
     // Choose the best rotation, finish the computation
     // of the error by taking the square root of the sum of the squared distances,
     // and store the angle as well as the reflection status
-    let (final_rotated2, error, reflection, angle) = if error_flipped < error_original
+    let (pts_mds, error, reflection, angle) = if error_flipped < error_original
         && error_flipped < error_reflected
         && error_flipped < error_reflected_flipped
     {
@@ -162,7 +162,7 @@ pub(crate) fn procrustes(points1: &[Coord], points2: &[Coord]) -> Result<Procrus
     };
 
     // Final scaling and centering
-    let pts = final_rotated2
+    let pts = pts_mds
         .iter()
         .map(|p| Coord {
             x: p.x * norm1 + centroid1.x,
