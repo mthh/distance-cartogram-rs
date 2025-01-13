@@ -41,3 +41,5 @@ pub use moving_points_unipolar::CentralTendency;
 
 #[cfg(feature = "moving-points-multipolar")]
 pub use moving_points_multipolar::generate_positions_from_durations;
+#[cfg(feature = "moving-points-multipolar")]
+pub use moving_points_multipolar::generate_positions_from_durations2;
