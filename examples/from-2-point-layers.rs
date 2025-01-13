@@ -4,55 +4,6 @@ use geojson::{Feature, FeatureCollection, GeoJson, Geometry, Value};
 use std::io::Write;
 use std::time::Instant;
 
-fn prepare_grid_geojson(
-    grid: &Grid,
-    grid_type: GridType,
-    foreign_members: Option<geojson::JsonObject>,
-) -> GeoJson {
-    let mut features = Vec::new();
-    for (i, polygon) in grid.get_grid(grid_type).iter().enumerate() {
-        let geometry = Geometry::new(geojson::Value::from(polygon));
-        let mut props = geojson::JsonObject::new();
-        props.insert("id".to_string(), i.into());
-        let feature = Feature {
-            bbox: None,
-            geometry: Some(geometry),
-            id: None,
-            properties: Some(props),
-            foreign_members: None,
-        };
-        features.push(feature);
-    }
-
-    let feature_collection = FeatureCollection {
-        bbox: None,
-        features,
-        foreign_members,
-    };
-    GeoJson::FeatureCollection(feature_collection)
-}
-
-fn read_crs(geojson_layer: &GeoJson) -> Option<geojson::JsonObject> {
-    let foreign_members = match &geojson_layer {
-        GeoJson::FeatureCollection(collection) => collection.foreign_members.as_ref(),
-        _ => panic!("Expected a feature collection"),
-    };
-    if let Some(foreign_members) = foreign_members {
-        if foreign_members.contains_key("crs") {
-            let mut fm = geojson::JsonObject::new();
-            fm.insert(
-                "crs".to_string(),
-                foreign_members.get("crs").unwrap().clone(),
-            );
-            Some(fm)
-        } else {
-            None
-        }
-    } else {
-        None
-    }
-}
-
 pub fn main() {
     let path_source = "examples/data-source-point.geojson";
     let path_image = "examples/data-image-point.geojson";
@@ -81,7 +32,7 @@ pub fn main() {
         _ => panic!("Expected a feature collection"),
     };
 
-    // Read feature collection to get the crs of the layer if any
+    // Read the CRS of the background layer if any
     let crs_background = read_crs(&geojson_background);
 
     let features_background = match geojson_background {
@@ -147,7 +98,7 @@ pub fn main() {
     let grid = Grid::new(&points_source, &points_image, 2., n_iter, Some(bbox))
         .expect("Unable to create grid");
     println!(
-        "Grid creation, bidimensional regression step and metric computation: {:?}",
+        "Grid creation, bidimensional regression step and metrics computation: {:?}",
         t.elapsed()
     );
     println!(
@@ -171,15 +122,8 @@ pub fn main() {
         prepare_grid_geojson(&grid, GridType::Interpolated, crs_background.clone());
 
     // ... and save them to files for latter visualization
-    let mut file =
-        std::fs::File::create("examples/grid-source.geojson").expect("Unable to create file");
-    file.write_all(grid_source.to_string().as_bytes())
-        .expect("Unable to write file grid-source.geojson");
-
-    let mut file =
-        std::fs::File::create("examples/grid-interpolated.geojson").expect("Unable to create file");
-    file.write_all(grid_interpolated.to_string().as_bytes())
-        .expect("Unable to write file grid-interpolated.geojson");
+    save_to_file(&grid_source, "examples/grid-source.geojson");
+    save_to_file(&grid_interpolated, "examples/grid-interpolated.geojson");
 
     // Write the GeoJson to a file, taking care to transferring the original properties
     let mut features = Vec::new();
@@ -194,13 +138,66 @@ pub fn main() {
         };
         features.push(feature);
     }
-    let geojson = GeoJson::FeatureCollection(FeatureCollection {
+    let fc = FeatureCollection {
         bbox: None,
         features,
         foreign_members: crs_background,
-    });
-    let mut file =
-        std::fs::File::create("examples/data-transformed.geojson").expect("Unable to create file");
-    file.write_all(geojson.to_string().as_bytes())
-        .expect("Unable to write file data-transformed.geojson");
+    };
+
+    save_to_file(&fc, "examples/data-transformed.geojson");
+}
+
+fn prepare_grid_geojson(
+    grid: &Grid,
+    grid_type: GridType,
+    foreign_members: Option<geojson::JsonObject>,
+) -> FeatureCollection {
+    let mut features = Vec::new();
+    for (i, polygon) in grid.get_grid(grid_type).iter().enumerate() {
+        let geometry = Geometry::new(geojson::Value::from(polygon));
+        let mut props = geojson::JsonObject::new();
+        props.insert("id".to_string(), i.into());
+        let feature = Feature {
+            bbox: None,
+            geometry: Some(geometry),
+            id: None,
+            properties: Some(props),
+            foreign_members: None,
+        };
+        features.push(feature);
+    }
+
+    FeatureCollection {
+        bbox: None,
+        features,
+        foreign_members,
+    }
+}
+
+fn read_crs(geojson_layer: &GeoJson) -> Option<geojson::JsonObject> {
+    let foreign_members = match &geojson_layer {
+        GeoJson::FeatureCollection(collection) => collection.foreign_members.as_ref(),
+        _ => panic!("Expected a feature collection"),
+    };
+    if let Some(foreign_members) = foreign_members {
+        if foreign_members.contains_key("crs") {
+            let mut fm = geojson::JsonObject::new();
+            fm.insert(
+                "crs".to_string(),
+                foreign_members.get("crs").unwrap().clone(),
+            );
+            Some(fm)
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}
+
+fn save_to_file(feature_collection: &FeatureCollection, path: &str) {
+    std::fs::File::create(path)
+        .expect(format!("Unable to create file {}", path).as_str())
+        .write_all(feature_collection.to_string().as_bytes())
+        .expect(format!("Unable to write file {}", path).as_str());
 }

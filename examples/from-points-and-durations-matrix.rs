@@ -12,42 +12,18 @@ fn main() {
     // The durations matrix
     let path_durations = "./examples/mat.csv";
 
-    let file_source =
-        std::fs::File::open(path_source).expect("Unable to open file of source points");
-    let file_background =
-        std::fs::File::open(path_layer_to_deform).expect("Unable to open file of layer to deform");
-    let file_durations =
-        std::fs::File::open(path_durations).expect("Unable to open file of durations");
+    let geojson_source = read_geojson(path_source);
+    let geojson_background = read_geojson(path_layer_to_deform);
 
-    let geojson_source =
-        GeoJson::from_reader(&file_source).expect("Unable to read file of source points");
-    let geojson_background =
-        GeoJson::from_reader(&file_background).expect("Unable to read file of layer to deform");
-    let (durations, _ids) = utils::read_csv(file_durations);
+    let (durations, _ids) = utils::read_csv(
+        std::fs::File::open(path_durations).expect("Unable to open file of durations"),
+    );
 
     // Read the background layer.
     // We want to read the foreign members of the GeoJson FeatureCollection
     // to extract the CRS of the layer if any.
-    let fm = {
-        let foreign_members = match &geojson_background {
-            GeoJson::FeatureCollection(collection) => collection.foreign_members.as_ref(),
-            _ => panic!("Expected a feature collection"),
-        };
-        if let Some(foreign_members) = foreign_members {
-            if foreign_members.contains_key("crs") {
-                let mut fm = geojson::JsonObject::new();
-                fm.insert(
-                    "crs".to_string(),
-                    foreign_members.get("crs").unwrap().clone(),
-                );
-                Some(fm)
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    };
+    // Read the CRS of the background layer if any
+    let fm = read_crs(&geojson_background);
 
     let features_background = match geojson_background {
         GeoJson::FeatureCollection(collection) => collection.features,
@@ -77,7 +53,7 @@ fn main() {
     };
 
     let t = Instant::now();
-    let positioning_result = generate_positions_from_durations(durations, &points_source)
+    let positioning_result = generate_positions_from_durations(durations.clone(), &points_source)
         .expect("Unable to generate positions from durations");
     println!("Generating points from durations matrix: {:?}", t.elapsed());
     println!(
@@ -90,31 +66,8 @@ fn main() {
     );
     let points_image = positioning_result.points;
 
-    let mut features = Vec::new();
-    for (i, pt) in points_image.iter().enumerate() {
-        let geometry = Geometry::new(Value::Point(vec![pt.x, pt.y]));
-        let mut props = geojson::JsonObject::new();
-        props.insert("id".to_string(), i.into());
-        let feature = Feature {
-            bbox: None,
-            geometry: Some(geometry),
-            id: None,
-            properties: Some(props),
-            foreign_members: None,
-        };
-        features.push(feature);
-    }
-
-    let feature_collection = FeatureCollection {
-        bbox: None,
-        features,
-        foreign_members: fm.clone(),
-    };
-
-    let mut file =
-        std::fs::File::create("examples/moved-points.geojson").expect("Unable to create file");
-    file.write_all(feature_collection.to_string().as_bytes())
-        .expect("Unable to write file examples/moved-points.geojson");
+    let feature_collection = create_fc_from_coords(&points_image, fm.clone());
+    save_to_file(&feature_collection, "examples/moved-points.geojson");
 
     // Read the background layer
     // Extract properties and geometries from the background layer
@@ -141,7 +94,7 @@ fn main() {
     let grid = Grid::new(&points_source, &points_image, 2., n_iter, Some(bbox))
         .expect("Unable to create grid");
     println!(
-        "Grid creation, bidimensional regression step and metric computation: {:?}",
+        "Grid creation, bidimensional regression step and metrics computation: {:?}",
         t.elapsed()
     );
     println!(
@@ -172,13 +125,70 @@ fn main() {
         };
         features.push(feature);
     }
-    let geojson = GeoJson::FeatureCollection(FeatureCollection {
+    let fc = FeatureCollection {
         bbox: None,
         features,
         foreign_members: fm,
-    });
-    let mut file =
-        std::fs::File::create("examples/data-transformed.geojson").expect("Unable to create file");
-    file.write_all(geojson.to_string().as_bytes())
-        .expect("Unable to write file data-transformed.geojson");
+    };
+
+    save_to_file(&fc, "examples/data-transformed.geojson");
+}
+
+fn create_fc_from_coords(pts: &[Coord], fm: Option<geojson::JsonObject>) -> FeatureCollection {
+    let mut features = Vec::new();
+
+    for (i, pt) in pts.iter().enumerate() {
+        let geometry = Geometry::new(Value::Point(vec![pt.x, pt.y]));
+        let mut props = geojson::JsonObject::new();
+        props.insert("id".to_string(), i.into());
+        let feature = Feature {
+            bbox: None,
+            geometry: Some(geometry),
+            id: None,
+            properties: Some(props),
+            foreign_members: None,
+        };
+        features.push(feature);
+    }
+
+    FeatureCollection {
+        bbox: None,
+        features,
+        foreign_members: fm.clone(),
+    }
+}
+
+fn save_to_file(feature_collection: &FeatureCollection, path: &str) {
+    std::fs::File::create(path)
+        .expect(format!("Unable to create file {}", path).as_str())
+        .write_all(feature_collection.to_string().as_bytes())
+        .expect(format!("Unable to write file {}", path).as_str());
+}
+
+fn read_geojson(path: &str) -> GeoJson {
+    let file_source =
+        std::fs::File::open(path).expect(format!("Unable to open file '{}'", path).as_str());
+
+    GeoJson::from_reader(&file_source).expect(format!("Unable to read file '{}'", path).as_str())
+}
+
+fn read_crs(geojson_layer: &GeoJson) -> Option<geojson::JsonObject> {
+    let foreign_members = match &geojson_layer {
+        GeoJson::FeatureCollection(collection) => collection.foreign_members.as_ref(),
+        _ => panic!("Expected a feature collection"),
+    };
+    if let Some(foreign_members) = foreign_members {
+        if foreign_members.contains_key("crs") {
+            let mut fm = geojson::JsonObject::new();
+            fm.insert(
+                "crs".to_string(),
+                foreign_members.get("crs").unwrap().clone(),
+            );
+            Some(fm)
+        } else {
+            None
+        }
+    } else {
+        None
+    }
 }

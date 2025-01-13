@@ -91,32 +91,9 @@ fn main() {
     let points_image = move_points(&points_source, &times, 1., CentralTendency::Median).unwrap();
     println!("Moving points: {:?}", t.elapsed());
 
-    // Save the displaced points to file
-    let mut features = Vec::new();
-    for (i, pt) in points_image.iter().enumerate() {
-        let geometry = Geometry::new(Value::Point(vec![pt.x, pt.y]));
-        let mut props = geojson::JsonObject::new();
-        props.insert("id".to_string(), i.into());
-        let feature = Feature {
-            bbox: None,
-            geometry: Some(geometry),
-            id: None,
-            properties: Some(props),
-            foreign_members: None,
-        };
-        features.push(feature);
-    }
+    let feature_collection = create_fc_from_coords(&points_image, fm.clone());
 
-    let feature_collection = FeatureCollection {
-        bbox: None,
-        features,
-        foreign_members: fm.clone(),
-    };
-
-    let mut file =
-        std::fs::File::create("examples/moved-points.geojson").expect("Unable to create file");
-    file.write_all(feature_collection.to_string().as_bytes())
-        .expect("Unable to write file examples/moved-points.geojson");
+    save_to_file(&feature_collection, "examples/moved-points.geojson");
 
     // Read the background layer
     // Extract properties and geometries from the background layer
@@ -143,7 +120,7 @@ fn main() {
     let grid = Grid::new(&points_source, &points_image, 2., n_iter, Some(bbox))
         .expect("Unable to create grid");
     println!(
-        "Grid creation, bidimensional regression step and metric computation: {:?}",
+        "Grid creation, bidimensional regression step and metrics computation: {:?}",
         t.elapsed()
     );
     println!(
@@ -174,13 +151,42 @@ fn main() {
         };
         features.push(feature);
     }
-    let geojson = GeoJson::FeatureCollection(FeatureCollection {
+    let fc = FeatureCollection {
         bbox: None,
         features,
         foreign_members: fm,
-    });
-    let mut file =
-        std::fs::File::create("examples/data-transformed.geojson").expect("Unable to create file");
-    file.write_all(geojson.to_string().as_bytes())
-        .expect("Unable to write file data-transformed.geojson");
+    };
+
+    save_to_file(&fc, "examples/data-transformed.geojson");
+}
+
+fn create_fc_from_coords(pts: &[Coord], fm: Option<geojson::JsonObject>) -> FeatureCollection {
+    let mut features = Vec::new();
+
+    for (i, pt) in pts.iter().enumerate() {
+        let geometry = Geometry::new(Value::Point(vec![pt.x, pt.y]));
+        let mut props = geojson::JsonObject::new();
+        props.insert("id".to_string(), i.into());
+        let feature = Feature {
+            bbox: None,
+            geometry: Some(geometry),
+            id: None,
+            properties: Some(props),
+            foreign_members: None,
+        };
+        features.push(feature);
+    }
+
+    FeatureCollection {
+        bbox: None,
+        features,
+        foreign_members: fm.clone(),
+    }
+}
+
+fn save_to_file(feature_collection: &FeatureCollection, path: &str) {
+    std::fs::File::create(path)
+        .expect(format!("Unable to create file {}", path).as_str())
+        .write_all(feature_collection.to_string().as_bytes())
+        .expect(format!("Unable to write file {}", path).as_str());
 }
