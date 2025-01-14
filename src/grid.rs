@@ -570,6 +570,11 @@ impl Grid {
     pub fn r_squared(&self) -> f64 {
         self.r_squared
     }
+
+    /// Get the dimensions of the grid as (width, height)
+    pub fn grid_dimensions(&self) -> (usize, usize) {
+        (self.nodes.width, self.nodes.height)
+    }
 }
 
 impl Debug for Grid {
