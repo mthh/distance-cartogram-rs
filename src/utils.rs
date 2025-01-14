@@ -1,3 +1,4 @@
+use crate::grid::RMSE;
 use geo_types::Coord;
 
 pub(crate) fn distance_sq(p1: &Coord, p2: &Coord) -> f64 {
@@ -16,17 +17,24 @@ pub fn get_nb_iterations(nb_points: usize) -> usize {
 }
 
 /// Compute the Root Mean Square Error (RMSE).
-/// It measures differences between predicted values and observed values
+/// It usually measures differences between predicted values and observed values
 /// and gives an idea of the overall accuracy of the regression.
-pub(crate) fn rmse(image_points: &[Coord], interpolated_points: &[Coord]) -> f64 {
-    let mut sum_sq_error = 0.0;
-    let n = image_points.len();
+pub(crate) fn rmse(points1: &[Coord], points2: &[Coord]) -> RMSE {
+    let n = points1.len();
+    let nf = n as f64;
+    let mut sum_sq_error_x = 0.0;
+    let mut sum_sq_error_y = 0.0;
     for i in 0..n {
-        let dx = image_points[i].x - interpolated_points[i].x;
-        let dy = image_points[i].y - interpolated_points[i].y;
-        sum_sq_error += dx * dx + dy * dy;
+        let dx = points1[i].x - points2[i].x;
+        let dy = points1[i].y - points2[i].y;
+        sum_sq_error_x += dx * dx;
+        sum_sq_error_y += dy * dy;
     }
-    (sum_sq_error / n as f64).sqrt()
+    RMSE {
+        rmse: ((sum_sq_error_x + sum_sq_error_y) / nf).sqrt(),
+        rmse_x: (sum_sq_error_x / nf).sqrt(),
+        rmse_y: (sum_sq_error_y / nf).sqrt(),
+    }
 }
 
 /// Compute the R-squared value. It measures the proportion of the variance

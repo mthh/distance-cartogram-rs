@@ -17,6 +17,15 @@ pub enum GridType {
     Interpolated,
 }
 
+/// The Root Mean Squared Error (RMSE) between two sets of points
+/// (the total RMSE and the RMSE for the x and y directions).
+#[derive(Debug, Clone, Copy)]
+pub struct RMSE {
+    pub rmse: f64,
+    pub rmse_x: f64,
+    pub rmse_y: f64,
+}
+
 /// The grid for interpolating and deforming geometries.
 /// Based on Waldo Tobler bidimensional regression.
 ///
@@ -29,8 +38,9 @@ pub struct Grid {
     nodes: NodeSet,
     interpolated_points: Vec<Coord>,
     mae: f64,
-    rmse: f64,
     r_squared: f64,
+    rmse_interpolated_image: RMSE,
+    rmse_interpolated_source: RMSE,
 }
 
 impl Grid {
@@ -87,7 +97,16 @@ impl Grid {
             nodes,
             interpolated_points: vec![],
             mae: 0.0,
-            rmse: 0.0,
+            rmse_interpolated_image: RMSE {
+                rmse: 0.0,
+                rmse_x: 0.0,
+                rmse_y: 0.0,
+            },
+            rmse_interpolated_source: RMSE {
+                rmse: 0.0,
+                rmse_x: 0.0,
+                rmse_y: 0.0,
+            },
             r_squared: 0.0,
         };
         g.interpolate(source_points, image_points, n_iter);
@@ -213,8 +232,9 @@ impl Grid {
 
         self.interpolated_points = points.iter().map(|p| self._get_interp_point(p)).collect();
         self.mae = utils::mae(image_points, &self.interpolated_points);
-        self.rmse = utils::rmse(image_points, &self.interpolated_points);
         self.r_squared = utils::r_squared(image_points, &self.interpolated_points);
+        self.rmse_interpolated_image = utils::rmse(&self.interpolated_points, image_points);
+        self.rmse_interpolated_source = utils::rmse(points, &self.interpolated_points);
     }
 
     /// Interpolate the point src_point on the transformed grid.
@@ -527,12 +547,18 @@ impl Grid {
         self.mae
     }
 
-    /// Retrieve the Root Mean Squared Error (RMSE) between the image points
-    /// and the interpolated points.
+    /// Retrieve the Root Mean Squared Error (RMSE) between the interpolated points
+    /// and the image points.
     /// It measures differences between predicted values and observed values
     /// and gives an idea of the overall accuracy of the regression.
-    pub fn rmse(&self) -> f64 {
-        self.rmse
+    pub fn rmse_interp_image(&self) -> RMSE {
+        self.rmse_interpolated_image
+    }
+
+    /// Retrieve the Root Mean Squared Error (RMSE) between the interpolated points
+    /// and the source points.
+    pub fn rmse_interp_source(&self) -> RMSE {
+        self.rmse_interpolated_source
     }
 
     /// Retrieve the R-squared value between the image points
@@ -550,9 +576,13 @@ impl Debug for Grid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Grid")
             .field("nodes", &self.nodes)
-            .field("mae", &self.mae)
-            .field("rmse", &self.rmse)
-            .field("r_squared", &self.r_squared)
+            .field("MAE", &self.mae)
+            .field("RMSE (interpolated - image)", &self.rmse_interpolated_image)
+            .field(
+                "RMSE (interpolated - source)",
+                &self.rmse_interpolated_source,
+            )
+            .field("R²", &self.r_squared)
             .finish()
     }
 }

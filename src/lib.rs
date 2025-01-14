@@ -39,7 +39,7 @@ pub mod utils;
 mod moving_points_multipolar;
 
 pub use bbox::BBox;
-pub use grid::{Grid, GridType};
+pub use grid::{Grid, GridType, RMSE};
 
 #[cfg(feature = "moving-points-unipolar")]
 pub use moving_points_unipolar::move_points;
