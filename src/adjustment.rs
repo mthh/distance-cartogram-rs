@@ -1,6 +1,7 @@
 use crate::errors::Error;
 use geo_types::Coord;
 
+#[derive(Debug, Copy, Clone)]
 pub enum AdjustmentType {
     Affine,
     Euclidean,
