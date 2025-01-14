@@ -127,9 +127,10 @@ fn main() {
         t.elapsed()
     );
     println!(
-        "  ↳ MAE: {}, RMSE: {}, R-squared: {}, Deformation strength: {}",
+        "  ↳ MAE: {}, RMSE (interpolated - image): {:?}, RMSE (interpolated - source): {:?}, R-squared: {}, Deformation strength: {}",
         grid.mae(),
-        grid.rmse(),
+        grid.rmse_interp_image(),
+        grid.rmse_interp_source(),
         grid.r_squared(),
         grid.deformation_strength()
     );

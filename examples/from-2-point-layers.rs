@@ -22,15 +22,59 @@ pub fn main() {
     let geojson_background =
         GeoJson::from_reader(&file_background).expect("Unable to read file of layer to deform");
 
-    let features_source = match geojson_source {
+    let mut features_source = match geojson_source {
         GeoJson::FeatureCollection(collection) => collection.features,
         _ => panic!("Expected a feature collection"),
     };
 
-    let features_images = match geojson_image {
+    let mut features_images = match geojson_image {
         GeoJson::FeatureCollection(collection) => collection.features,
         _ => panic!("Expected a feature collection"),
     };
+
+    // Sort the source and image points by the "NOM_COM" property
+    features_source.sort_by(|a, b| {
+        a.clone()
+            .properties
+            .unwrap()
+            .clone()
+            .get("NOM_COM")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .clone()
+            .cmp(
+                b.properties
+                    .clone()
+                    .unwrap()
+                    .get("NOM_COM")
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+            )
+    });
+    features_images.sort_by(|a, b| {
+        a.clone()
+            .properties
+            .unwrap()
+            .clone()
+            .get("NOM_COM")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .clone()
+            .cmp(
+                b.properties
+                    .clone()
+                    .unwrap()
+                    .get("NOM_COM")
+                    .unwrap()
+                    .as_str()
+                    .unwrap(),
+            )
+    });
+
+    println!("Source points: {:?}", features_source);
 
     // Read the CRS of the background layer if any
     let crs_background = read_crs(&geojson_background);
@@ -102,9 +146,10 @@ pub fn main() {
         t.elapsed()
     );
     println!(
-        "  ↳ MAE: {}, RMSE: {}, R-squared: {}, Deformation strength: {}",
+        "  ↳ MAE: {}, RMSE (interpolated - image): {:?}, RMSE (interpolated - source): {:?}, R-squared: {}, Deformation strength: {}",
         grid.mae(),
-        grid.rmse(),
+        grid.rmse_interp_image(),
+        grid.rmse_interp_source(),
         grid.r_squared(),
         grid.deformation_strength()
     );
