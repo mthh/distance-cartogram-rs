@@ -1,4 +1,6 @@
-use distance_cartogram::{generate_positions_from_durations, utils, BBox, Grid};
+use distance_cartogram::{
+    adjustment, generate_positions_from_durations, procrustes, utils, BBox, Grid,
+};
 use geo_types::Coord;
 use geojson::{Feature, FeatureCollection, GeoJson, Geometry, Value};
 use std::io::Write;
@@ -53,21 +55,48 @@ fn main() {
     };
 
     let t = Instant::now();
-    let positioning_result = generate_positions_from_durations(durations.clone(), &points_source)
+    let mds_points = generate_positions_from_durations(durations.clone())
         .expect("Unable to generate positions from durations");
     println!("Generating points from durations matrix: {:?}", t.elapsed());
-    println!(
-        "  ↳ Rotation angle: {}, Scale: {}, Translation: [{}, {}], Error (procrustes distance): {}",
-        positioning_result.angle,
-        positioning_result.scale,
-        positioning_result.translation.x,
-        positioning_result.translation.y,
-        positioning_result.error,
-    );
-    let points_image = positioning_result.points;
 
-    let feature_collection = create_fc_from_coords(&points_image, fm.clone());
-    save_to_file(&feature_collection, "examples/moved-points.geojson");
+    let t = Instant::now();
+    let positioning_result = procrustes::procrustes(&points_source, &mds_points)
+        .expect("Unable to generate positions from durations");
+    println!(
+        "\nAdjusting image points to source points (using Procrustes Analysis): {:?}",
+        t.elapsed()
+    );
+    println!(
+        "  ↳ Results from procrustes analysis: {:?}",
+        positioning_result
+    );
+
+    let feature_collection = create_fc_from_coords(&positioning_result.points, fm.clone());
+    save_to_file(
+        &feature_collection,
+        "examples/moved-points-procrustes.geojson",
+    );
+
+    let t = Instant::now();
+    let positioning_result = adjustment::adjust(
+        &points_source,
+        &mds_points,
+        adjustment::AdjustmentType::Euclidean,
+    )
+    .expect("Unable to generate positions from durations");
+    println!(
+        "\nAdjusting image points to source points (using euclidean adjustment): {:?}",
+        t.elapsed()
+    );
+    println!("  ↳ Results from adjustment: {:?}", positioning_result);
+
+    let feature_collection = create_fc_from_coords(&positioning_result.points_adjusted, fm.clone());
+    save_to_file(
+        &feature_collection,
+        "examples/moved-points-euclidean-transformation.geojson",
+    );
+
+    let points_image = positioning_result.points_adjusted;
 
     // Read the background layer
     // Extract properties and geometries from the background layer
@@ -83,7 +112,7 @@ fn main() {
     // Compute BBox of background layer
     let t = Instant::now();
     let bbox = BBox::from_geometries(&bg);
-    println!("BBox computation: {:?}", t.elapsed());
+    println!("\nBBox computation: {:?}", t.elapsed());
 
     // Prepare the grid for the cartogram
     // How many iterations to perform
@@ -94,7 +123,7 @@ fn main() {
     let grid = Grid::new(&points_source, &points_image, 2., n_iter, Some(bbox))
         .expect("Unable to create grid");
     println!(
-        "Grid creation, bidimensional regression step and metrics computation: {:?}",
+        "\nGrid creation, bidimensional regression step and metrics computation: {:?}",
         t.elapsed()
     );
     println!(
@@ -110,7 +139,7 @@ fn main() {
     let bg_transformed = grid
         .interpolate_layer(&bg)
         .expect("Unable to interpolate layer");
-    println!("Layer interpolation: {:?}", t.elapsed());
+    println!("\nLayer interpolation: {:?}", t.elapsed());
 
     // Write the GeoJson to a file, taking care to transferring the original properties
     let mut features = Vec::new();

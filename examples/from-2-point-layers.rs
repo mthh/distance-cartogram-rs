@@ -98,7 +98,7 @@ pub fn main() {
     let grid = Grid::new(&points_source, &points_image, 2., n_iter, Some(bbox))
         .expect("Unable to create grid");
     println!(
-        "Grid creation, bidimensional regression step and metrics computation: {:?}",
+        "\nGrid creation, bidimensional regression step and metrics computation: {:?}",
         t.elapsed()
     );
     println!(
@@ -114,7 +114,7 @@ pub fn main() {
     let bg_transformed = grid
         .interpolate_layer(&bg)
         .expect("Unable to interpolate layer");
-    println!("Layer interpolation: {:?}", t.elapsed());
+    println!("\nLayer interpolation: {:?}", t.elapsed());
 
     // Get the source grid and the interpolated grid...
     let grid_source = prepare_grid_geojson(&grid, GridType::Source, crs_background.clone());

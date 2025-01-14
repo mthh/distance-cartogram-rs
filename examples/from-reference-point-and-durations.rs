@@ -109,7 +109,7 @@ fn main() {
     // Compute BBox of background layer
     let t = Instant::now();
     let bbox = BBox::from_geometries(&bg);
-    println!("BBox computation: {:?}", t.elapsed());
+    println!("\nBBox computation: {:?}", t.elapsed());
 
     // Prepare the grid for the cartogram
     // How many iterations to perform
@@ -120,7 +120,7 @@ fn main() {
     let grid = Grid::new(&points_source, &points_image, 2., n_iter, Some(bbox))
         .expect("Unable to create grid");
     println!(
-        "Grid creation, bidimensional regression step and metrics computation: {:?}",
+        "\nGrid creation, bidimensional regression step and metrics computation: {:?}",
         t.elapsed()
     );
     println!(
@@ -136,7 +136,7 @@ fn main() {
     let bg_transformed = grid
         .interpolate_layer(&bg)
         .expect("Unable to interpolate layer");
-    println!("Layer interpolation: {:?}", t.elapsed());
+    println!("\nLayer interpolation: {:?}", t.elapsed());
 
     // Write the GeoJson to a file, taking care to transferring the original properties
     let mut features = Vec::new();
