@@ -10,8 +10,12 @@
 //! to create a distance cartogram.
 //!
 //! This crate also provides a way to move points from a reference point and a set of durations (using
-//! the `moving-points` feature). This can be useful if you only have source points and want to
+//! the `moving-points-unipolar` feature). This can be useful if you only have source points and want to
 //! create image points from them.
+//!
+//! This crate also provides a way to generate positions from a durations matrix
+//! (using the `moving-points-multipolar` feature). This can be useful if you have a durations matrix
+//! between all the source points and want to create image points from them.
 mod bbox;
 mod errors;
 mod grid;
@@ -21,13 +25,16 @@ mod moving_points_unipolar;
 mod node;
 mod rectangle;
 
-#[cfg(feature = "moving-points-multipolar")]
-mod procrustes;
+/// Module for the adjustment of image points to source points
+/// using Affine or Euclidean transformations
+pub mod adjustment;
+/// Module for the adjustment of image points to source points
+/// using the procrustes analysis
+pub mod procrustes;
 
 /// Useful utilities for working with the interpolation grid.
 pub mod utils;
 
-pub mod adjustment;
 #[cfg(feature = "moving-points-multipolar")]
 mod moving_points_multipolar;
 
@@ -41,5 +48,3 @@ pub use moving_points_unipolar::CentralTendency;
 
 #[cfg(feature = "moving-points-multipolar")]
 pub use moving_points_multipolar::generate_positions_from_durations;
-#[cfg(feature = "moving-points-multipolar")]
-pub use moving_points_multipolar::generate_positions_from_durations2;

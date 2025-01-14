@@ -81,14 +81,35 @@ fn procrustes_distance<'a>(zip_iter: impl Iterator<Item = (&'a Coord, &'a Coord)
         .sum::<f64>()
 }
 
-pub(crate) struct ProcrustesResult {
+/// The result of the Procrustes analysis including the transformed points.
+pub struct ProcrustesResult {
+    /// The transformed points
     pub points: Vec<Coord>,
+    /// The rotation angle in degrees
     pub angle: f64,
+    /// The centroid of the first set of points
     pub centroid: Coord,
+    /// The Procrustes distance
     pub error: f64,
+    /// Whether the transformation includes a reflection
     pub reflection: bool,
+    /// The scaling factor
     pub scale: f64,
+    /// The translation vector
     pub translation: Coord,
+}
+
+impl std::fmt::Debug for ProcrustesResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ProcrustesResult")
+            .field("angle", &self.angle)
+            .field("centroid", &self.centroid)
+            .field("error", &self.error)
+            .field("reflection", &self.reflection)
+            .field("scale", &self.scale)
+            .field("translation", &self.translation)
+            .finish()
+    }
 }
 
 /// Apply the Procrustes analysis to two sets of points and return the transformed points
@@ -97,7 +118,7 @@ pub(crate) struct ProcrustesResult {
 /// This is a naive version of the ordinary/classical Procrustes analysis (as described on
 /// https://en.wikipedia.org/wiki/Procrustes_analysis#Ordinary_Procrustes_analysis) that
 /// deals with translation, rotation, scaling and reflection of the second set of points.
-pub(crate) fn procrustes(points1: &[Coord], points2: &[Coord]) -> Result<ProcrustesResult, Error> {
+pub fn procrustes(points1: &[Coord], points2: &[Coord]) -> Result<ProcrustesResult, Error> {
     if points1.len() != points2.len() {
         return Err(Error::ProcrustesInputLengthMismatch);
     }
@@ -137,7 +158,7 @@ pub(crate) fn procrustes(points1: &[Coord], points2: &[Coord]) -> Result<Procrus
     // Choose the best rotation, finish the computation
     // of the error by taking the square root of the sum of the squared distances,
     // and store the angle as well as the reflection status
-    let (pts_mds, error, reflection, angle) = if error_flipped < error_original
+    let (rotated_points, error, reflection, angle) = if error_flipped < error_original
         && error_flipped < error_reflected
         && error_flipped < error_reflected_flipped
     {
@@ -162,7 +183,7 @@ pub(crate) fn procrustes(points1: &[Coord], points2: &[Coord]) -> Result<Procrus
     };
 
     // Final scaling and centering
-    let pts = pts_mds
+    let pts = rotated_points
         .iter()
         .map(|p| Coord {
             x: p.x * norm1 + centroid1.x,
@@ -172,7 +193,7 @@ pub(crate) fn procrustes(points1: &[Coord], points2: &[Coord]) -> Result<Procrus
 
     Ok(ProcrustesResult {
         points: pts,
-        angle,
+        angle: angle.to_degrees(),
         centroid: centroid1,
         error,
         reflection,

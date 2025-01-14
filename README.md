@@ -31,10 +31,10 @@ not moved - used for unipolar distance cartograms).
 This function returns the *image points* that can be used with the `Grid` struct to create distance cartograms.
 
 This crate also provides a `generate_positions_from_durations` function (under the `moving-points-multipolar` feature gate) that can be used to create
-the images points from the source points and the time between them (this is a multipolar displacement - there is no reference point, all the points might be moved - used for multipolar distance cartograms).
-Internally this function performs PCoA on the durations matrix to get the relative positions of the points, then it
-uses Ordinary Procrustes Analysis to compare the positions obtained from the durations matrix with the source points 
-in order to get the *image points* that can be used with the `Grid` struct to create distance cartograms.
+the images points from the durations between all the source points (this is a multipolar displacement - there is no reference point, all the points might be moved - used for multipolar distance cartograms).
+Internally this function performs PCoA on the durations matrix to get the relative positions of the points. We say "relative positions" because the points returned are still centered on (0, 0) and can't be used directly to create a distance cartogram. 
+
+You then need to fit these points to the source points (using either the `adjustment::adjust` or the `procrustes::procrustes` function) to get the final image points that can be used with the `Grid` struct to create distance cartograms.
 
 See the examples in the [`examples`](./examples) directory for more details:
 

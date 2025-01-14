@@ -6,7 +6,7 @@ pub enum AdjustmentType {
     Euclidean,
 }
 
-fn getScale(scale_x: f64, shear_x: f64, scale_y: f64, shear_y: f64) -> f64 {
+fn get_scale(scale_x: f64, shear_x: f64, scale_y: f64, shear_y: f64) -> f64 {
     let scale_x0 = if shear_x == 0.0 {
         scale_x.abs()
     } else if scale_x == 0.0 {
@@ -26,7 +26,7 @@ fn getScale(scale_x: f64, shear_x: f64, scale_y: f64, shear_y: f64) -> f64 {
     0.5 * (scale_x0 + scale_y0)
 }
 
-fn getRotation(scale_x: f64, shear_x: f64, scale_y: f64, shear_y: f64) -> f64 {
+fn get_rotation(scale_x: f64, shear_x: f64, scale_y: f64, shear_y: f64) -> f64 {
     let scale_x0 = if shear_x == 0.0 {
         scale_x.abs()
     } else if scale_x == 0.0 {
@@ -46,27 +46,39 @@ fn getRotation(scale_x: f64, shear_x: f64, scale_y: f64, shear_y: f64) -> f64 {
     (shear_y / scale_y0 - shear_x / scale_x0).atan2(scale_y / scale_y0 + scale_x / scale_x0)
 }
 
-pub struct TransformationMatrix {
-    pub a11: f64,
-    pub a12: f64,
-    pub a13: f64,
-    pub a21: f64,
-    pub a22: f64,
-    pub a23: f64,
+/// Result of the adjustment operation including the adjusted points.
+pub struct AdjustmentResult {
+    /// The transformation matrix
+    pub transformation_matrix: TransformationMatrix,
+    /// The scale factor
     pub scale: f64,
+    /// The rotation angle in degrees
     pub angle: f64,
+    /// The adjusted points
     pub points_adjusted: Vec<Coord>,
 }
 
-impl std::fmt::Debug for TransformationMatrix {
+/// A 2D transformation matrix.
+#[derive(Debug)]
+pub struct TransformationMatrix {
+    /// Scale factor in the x direction
+    pub a11: f64,
+    /// Shear factor in the x direction
+    pub a12: f64,
+    /// Translation in the x direction
+    pub a13: f64,
+    /// Shear factor in the y direction
+    pub a21: f64,
+    /// Scale factor in the y direction
+    pub a22: f64,
+    /// Translation in the y direction
+    pub a23: f64,
+}
+
+impl std::fmt::Debug for AdjustmentResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("TransformationMatrix")
-            .field("a11", &self.a11)
-            .field("a12", &self.a12)
-            .field("a13", &self.a13)
-            .field("a21", &self.a21)
-            .field("a22", &self.a22)
-            .field("a23", &self.a23)
+        f.debug_struct("AdjustmentResult")
+            .field("transformation_matrix", &self.transformation_matrix)
             .field("scale", &self.scale)
             .field("angle", &self.angle)
             .finish()
@@ -77,7 +89,7 @@ pub fn adjust(
     source_points: &[Coord],
     image_points: &[Coord],
     adjustment_type: AdjustmentType,
-) -> Result<TransformationMatrix, Error> {
+) -> Result<AdjustmentResult, Error> {
     let source_pts: Vec<_> = source_points.iter().map(|p| (p.x, p.y)).collect();
     let image_pts: Vec<_> = image_points.iter().map(|p| (p.x, p.y)).collect();
 
@@ -171,18 +183,22 @@ pub fn adjust(
         })
         .collect();
 
-    let scale = getScale(a11, a12, a22, a21);
-    let angle = getRotation(a11, a12, a22, a21).to_degrees();
+    let scale = get_scale(a11, a12, a22, a21);
+    let angle = get_rotation(a11, a12, a22, a21).to_degrees();
 
-    Ok(TransformationMatrix {
+    let tm = TransformationMatrix {
         a11,
         a12,
         a13,
         a21,
         a22,
         a23,
+    };
+
+    Ok(AdjustmentResult {
         scale,
         angle,
+        transformation_matrix: tm,
         points_adjusted: adjusted_points,
     })
 }
