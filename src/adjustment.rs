@@ -49,14 +49,20 @@ fn get_rotation(scale_x: f64, shear_x: f64, scale_y: f64, shear_y: f64) -> f64 {
 
 /// Result of the adjustment operation including the adjusted points.
 pub struct AdjustmentResult {
+    /// The adjusted points
+    pub points_adjusted: Vec<Coord>,
     /// The transformation matrix
     pub transformation_matrix: TransformationMatrix,
     /// The scale factor
     pub scale: f64,
     /// The rotation angle in degrees
     pub angle: f64,
-    /// The adjusted points
-    pub points_adjusted: Vec<Coord>,
+    /// The root mean square error (RMSE)
+    pub rmse: f64,
+    /// The root mean square error (RMSE) in the x direction
+    pub rmse_x: f64,
+    /// The root mean square error (RMSE) in the y direction
+    pub rmse_y: f64,
 }
 
 /// A 2D transformation matrix.
@@ -82,6 +88,9 @@ impl std::fmt::Debug for AdjustmentResult {
             .field("transformation_matrix", &self.transformation_matrix)
             .field("scale", &self.scale)
             .field("angle", &self.angle)
+            .field("rmse", &self.rmse)
+            .field("rmse_x", &self.rmse_x)
+            .field("rmse_y", &self.rmse_y)
             .finish()
     }
 }
@@ -182,10 +191,24 @@ pub fn adjust(
             x: cx * a11 + cy * a12 + a13,
             y: cx * a21 + cy * a22 + a23,
         })
-        .collect();
+        .collect::<Vec<_>>();
 
+    // Compute angle and scale of the transformation
     let scale = get_scale(a11, a12, a22, a21);
     let angle = get_rotation(a11, a12, a22, a21).to_degrees();
+
+    // Compute some statistics
+    let mut src_to_adj_x = 0.0;
+    let mut src_to_adj_y = 0.0;
+
+    for (src, adj) in source_points.iter().zip(adjusted_points.iter()) {
+        src_to_adj_x += (src.x - adj.x).powi(2);
+        src_to_adj_y += (src.y - adj.y).powi(2);
+    }
+
+    let rmse = ((src_to_adj_x + src_to_adj_y) / n as f64).sqrt();
+    let rmse_x = (src_to_adj_x / n as f64).sqrt();
+    let rmse_y = (src_to_adj_y / n as f64).sqrt();
 
     let tm = TransformationMatrix {
         a11,
@@ -199,6 +222,9 @@ pub fn adjust(
     Ok(AdjustmentResult {
         scale,
         angle,
+        rmse,
+        rmse_x,
+        rmse_y,
         transformation_matrix: tm,
         points_adjusted: adjusted_points,
     })
