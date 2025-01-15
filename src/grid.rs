@@ -390,7 +390,7 @@ impl Grid {
     /// Interpolate a collection of geo_types geometries on the interpolation grid
     /// in parallel using rayon.
     ///
-    /// This is useful for interpolating the various geometries of layer in parallel
+    /// This is useful for interpolating the various geometries of a layer in parallel
     /// while [`interpolate_layers_par`](Grid::interpolate_layers_par) is useful for
     /// interpolating multiple layers at once.
     pub fn interpolate_layer_par(
