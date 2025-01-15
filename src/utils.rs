@@ -13,7 +13,7 @@ pub(crate) fn distance(p1: &Coord, p2: &Coord) -> f64 {
 /// Get the number of iterations for the interpolation
 /// given the number of points to interpolate.
 pub fn get_nb_iterations(nb_points: usize) -> usize {
-    (4. * (nb_points as f64).sqrt()).round() as usize
+    (4. * (nb_points as f64).sqrt()).floor() as usize
 }
 
 /// Compute the Root Mean Square Error (RMSE).
