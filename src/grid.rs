@@ -354,7 +354,7 @@ impl Grid {
     /// Compute the deformation strength for the node at position (i, j)
     pub fn node_deformation_strength(&self, i: usize, j: usize) -> f64 {
         let diff = self.get_diff(i, j);
-        ((diff[0].powi(2) + diff[1].powi(2) + diff[2].powi(3) + diff[3].powi(2)) / 2.).sqrt()
+        ((diff[0].powi(2) + diff[1].powi(2) + diff[2].powi(2) + diff[3].powi(2)) / 2.).sqrt()
     }
 
     /// Compute the average deformation strength for the grid
@@ -375,7 +375,7 @@ impl Grid {
         for i in 0..self.nodes.height {
             for j in 0..self.nodes.width {
                 let diff = self.get_diff(i, j);
-                m2 += (diff[0].powi(2) + diff[1].powi(2) + diff[2].powi(3) + diff[3].powi(2)) / 2.;
+                m2 += (diff[0].powi(2) + diff[1].powi(2) + diff[2].powi(2) + diff[3].powi(2)) / 2.;
             }
         }
         m2
