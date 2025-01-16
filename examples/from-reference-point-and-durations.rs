@@ -88,9 +88,10 @@ fn main() {
     ];
 
     let t = Instant::now();
-    let points_image = move_points(&points_source, &times, 1., CentralTendency::Median).unwrap();
-    println!("Moving points: {:?}", t.elapsed());
-
+    let positioning_result = move_points(&points_source, &times, 1., CentralTendency::Median).unwrap();
+    println!("Moving points: {:?}", t.  elapsed());
+    println!("  ↳ Reference speed: {:?} km/h", positioning_result.reference_speed / 1000. * 60.);
+    let points_image = positioning_result.points;
     let feature_collection = create_fc_from_coords(&points_image, fm.clone());
 
     save_to_file(&feature_collection, "examples/moved-points.geojson");

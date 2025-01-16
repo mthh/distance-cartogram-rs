@@ -9,6 +9,16 @@ pub enum CentralTendency {
     Median,
 }
 
+/// The result of the movement of the points.
+pub struct MovePointsResult {
+    /// The moved points.
+    pub points: Vec<Coord>,
+    /// The reference speed used for the movement
+    /// (can be useful to create concentric circles
+    /// around the reference point).
+    pub reference_speed: f64,
+}
+
 /// Move the points (using a central tendency method such as the
 /// mean or the median to compute the reference speed and determine
 /// how the points are moved).
@@ -32,7 +42,7 @@ pub fn move_points(
     durations: &[f64],
     factor: f64,
     method: CentralTendency,
-) -> Result<Vec<Coord>, Error> {
+) -> Result<MovePointsResult, Error> {
     if source_points.len() != durations.len() {
         return Err(Error::InvalidInputDurationsLength);
     }
@@ -93,5 +103,5 @@ pub fn move_points(
     // Add the reference point at the right index
     new_points.insert(idx, *ref_point);
 
-    Ok(new_points)
+    Ok(MovePointsResult{points: new_points, reference_speed: ref_speed})
 }

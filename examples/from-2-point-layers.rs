@@ -42,7 +42,6 @@ pub fn main() {
             .unwrap()
             .as_str()
             .unwrap()
-            .clone()
             .cmp(
                 b.properties
                     .clone()
@@ -62,7 +61,6 @@ pub fn main() {
             .unwrap()
             .as_str()
             .unwrap()
-            .clone()
             .cmp(
                 b.properties
                     .clone()
@@ -73,8 +71,6 @@ pub fn main() {
                     .unwrap(),
             )
     });
-
-    println!("Source points: {:?}", features_source);
 
     // Read the CRS of the background layer if any
     let crs_background = read_crs(&geojson_background);
