@@ -119,7 +119,7 @@ impl Grid {
     /// adjusting a grid of nodes to minimize the differences between
     /// the source and image points.
     fn interpolate(&mut self, points: &[Coord], image_points: &[Coord], n_iter: usize) {
-        // let rect = Rectangle2D::from_points(self.points);
+        // let rect = Rectangle2D::from_points(points);
         // let rect_adj = Rectangle2D::from_points(image_points);
         let mut rect = Rectangle2D::new(0., 0., -1., -1.);
         let mut rect_adj = Rectangle2D::new(0., 0., -1., -1.);
