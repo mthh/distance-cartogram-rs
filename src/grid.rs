@@ -137,7 +137,7 @@ impl Grid {
         let resolution = self.nodes.resolution;
         let width = self.nodes.width;
         let height = self.nodes.height;
-        let rect_dim = width * height;
+        let rect_dim = self.nodes.zone.width() * self.nodes.zone.height();
 
         for _k in 0..n_iter {
             for (src_pt, adj_pt) in points.iter().zip(image_points) {
@@ -220,7 +220,7 @@ impl Grid {
                             p_tmp.y = node.interp.y;
                             node.interp.x = p.x;
                             node.interp.y = p.y;
-                            delta = delta.max(distance_sq(&p_tmp, &node.interp) / rect_dim as f64);
+                            delta = delta.max(distance_sq(&p_tmp, &node.interp) / rect_dim);
                         }
                     }
                 }
