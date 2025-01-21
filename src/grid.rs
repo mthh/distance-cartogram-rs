@@ -298,6 +298,18 @@ impl Grid {
         result
     }
 
+    /// Returns the nodes of the (source) grid with their weights.
+    pub fn get_nodes_weight(&self) -> Vec<(geo_types::Point, f64)> {
+        let mut result = Vec::with_capacity(self.nodes.height * self.nodes.width);
+        for i in 0..self.nodes.height {
+            for j in 0..self.nodes.width {
+                let n = self.nodes.get_node(i, j);
+                result.push((geo_types::Point(n.source), n.weight));
+            }
+        }
+        result
+    }
+
     fn get_diff(&self, i: usize, j: usize) -> [f64; 4] {
         let mut diff = [0.; 4];
         let i = i as isize;
