@@ -166,6 +166,33 @@ pub fn main() {
     save_to_file(&grid_source, "examples/grid-source.geojson");
     save_to_file(&grid_interpolated, "examples/grid-interpolated.geojson");
 
+    // Get the nodes weight and save them to a file
+    let nodes_weights = grid.get_nodes_weight();
+    let mut features = Vec::new();
+
+    for (p, w) in nodes_weights.iter() {
+        let geometry = Geometry::new(geojson::Value::from(p));
+        let mut props = geojson::JsonObject::new();
+        props.insert("weight".to_string(), (*w).into());
+        let feature = Feature {
+            bbox: None,
+            geometry: Some(geometry),
+            id: None,
+            properties: Some(props),
+            foreign_members: None,
+        };
+        features.push(feature);
+    }
+
+    save_to_file(
+        &FeatureCollection {
+            bbox: None,
+            features,
+            foreign_members: crs_background.clone(),
+        },
+        "examples/nodes-weights.geojson",
+    );
+
     // Write the GeoJson to a file, taking care to transferring the original properties
     let mut features = Vec::new();
     for (polygon, props) in bg_transformed.into_iter().zip(props_bg_layer.into_iter()) {

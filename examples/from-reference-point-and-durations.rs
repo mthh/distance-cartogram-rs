@@ -1,4 +1,4 @@
-use distance_cartogram::{move_points, utils, BBox, CentralTendency, Grid};
+use distance_cartogram::{concentric_circles, move_points, utils, BBox, CentralTendency, Grid};
 use geo_types::Coord;
 use geojson::{Feature, FeatureCollection, GeoJson, Geometry, Value};
 use std::io::Write;
@@ -88,11 +88,15 @@ fn main() {
     ];
 
     let t = Instant::now();
-    let positioning_result = move_points(&points_source, &times, 1., CentralTendency::Median).unwrap();
-    println!("Moving points: {:?}", t.  elapsed());
-    println!("  ↳ Reference speed: {:?} km/h", positioning_result.reference_speed / 1000. * 60.);
-    let points_image = positioning_result.points;
-    let feature_collection = create_fc_from_coords(&points_image, fm.clone());
+    let positioning_result =
+        move_points(&points_source, &times, 1., CentralTendency::Median).unwrap();
+    println!("Moving points: {:?}", t.elapsed());
+    println!(
+        "  ↳ Reference speed: {:?} km/h",
+        positioning_result.reference_speed / 1000. * 60.
+    );
+    let points_image = &positioning_result.points;
+    let feature_collection = create_fc_from_coords(points_image, fm.clone());
 
     save_to_file(&feature_collection, "examples/moved-points.geojson");
 
@@ -118,7 +122,7 @@ fn main() {
 
     // Actual grid computation
     let t = Instant::now();
-    let grid = Grid::new(&points_source, &points_image, 2., n_iter, Some(bbox))
+    let grid = Grid::new(&points_source, points_image, 2., n_iter, Some(bbox))
         .expect("Unable to create grid");
     println!(
         "\nGrid creation, bidimensional regression step and metrics computation: {:?}",
@@ -156,10 +160,41 @@ fn main() {
     let fc = FeatureCollection {
         bbox: None,
         features,
-        foreign_members: fm,
+        foreign_members: fm.clone(),
     };
 
     save_to_file(&fc, "examples/data-transformed.geojson");
+
+    // Also create concentric circles around the reference point
+    // The durations are given in minutes so we pass the steps in minutes too.
+    let t = Instant::now();
+    let circles = concentric_circles(&positioning_result, vec![60., 180., 300., 420., 540., 660.]);
+    println!("\nConcentric circles creation: {:?}", t.elapsed());
+
+    let mut features = Vec::new();
+
+    for (geometry, duration) in circles {
+        let geom = geojson::Geometry::new(Value::from(&geometry));
+        let mut props = geojson::JsonObject::new();
+        props.insert("duration".to_string(), duration.into());
+        let feature = Feature {
+            bbox: None,
+            geometry: Some(geom),
+            id: None,
+            properties: Some(props),
+            foreign_members: None,
+        };
+        features.push(feature);
+    }
+
+    save_to_file(
+        &FeatureCollection {
+            bbox: None,
+            features,
+            foreign_members: fm,
+        },
+        "examples/concentric-circles.geojson",
+    );
 }
 
 fn create_fc_from_coords(pts: &[Coord], fm: Option<geojson::JsonObject>) -> FeatureCollection {
