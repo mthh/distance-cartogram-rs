@@ -135,6 +135,7 @@ impl Grid {
         let scale_y = rect_adj.height() / rect.height();
 
         let resolution = self.nodes.resolution;
+        let square_resolution = resolution * resolution;
         let width = self.nodes.width;
         let height = self.nodes.height;
         let rect_dim = self.nodes.zone.width() * self.nodes.zone.height();
@@ -180,17 +181,20 @@ impl Grid {
                     + adj_nodes[0].interp.x;
                 let hx2 = ux1 / resolution * (adj_nodes[3].interp.x - adj_nodes[2].interp.x)
                     + adj_nodes[2].interp.x;
+
                 let hx = vy1 / resolution * (hx1 - hx2) + hx2;
+
                 let hy1 = ux1 / resolution * (adj_nodes[1].interp.y - adj_nodes[0].interp.y)
                     + adj_nodes[0].interp.y;
                 let hy2 = ux1 / resolution * (adj_nodes[3].interp.y - adj_nodes[2].interp.y)
                     + adj_nodes[2].interp.y;
+
                 let hy = vy1 / resolution * (hy1 - hy2) + hy2;
 
                 let delta_x = adj_pt.x - hx;
                 let delta_y = adj_pt.y - hy;
-                let dx = delta_x * resolution * resolution;
-                let dy = delta_y * resolution * resolution;
+                let dx = delta_x * square_resolution;
+                let dy = delta_y * square_resolution;
 
                 for i in 0..4 {
                     let adj_x =
