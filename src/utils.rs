@@ -1,5 +1,5 @@
 use crate::grid::RMSE;
-use geo_types::Coord;
+use geo_types::{Coord, LineString};
 
 pub(crate) fn distance_sq(p1: &Coord, p2: &Coord) -> f64 {
     (p1.x - p2.x).powi(2) + (p1.y - p2.y).powi(2)
@@ -99,6 +99,23 @@ pub(crate) fn median(mut series: Vec<f64>) -> f64 {
     } else {
         series[mid]
     }
+}
+
+#[cfg(feature = "moving-points-unipolar")]
+pub(crate) fn buffer_around_point(pt: &Coord, distance: f64, num_segments: usize) -> LineString {
+    let mut coordinates = Vec::with_capacity(num_segments + 1);
+
+    for i in 0..num_segments {
+        let angle = 2. * std::f64::consts::PI * i as f64 / num_segments as f64;
+        let x = pt.x + distance * angle.cos();
+        let y = pt.y + distance * angle.sin();
+        coordinates.push(Coord { x, y });
+    }
+
+    // Close the polygon ring
+    coordinates.push(coordinates[0]);
+
+    coordinates.into()
 }
 
 #[cfg(feature = "moving-points-multipolar")]

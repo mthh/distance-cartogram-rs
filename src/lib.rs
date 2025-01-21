@@ -42,9 +42,9 @@ pub use bbox::BBox;
 pub use grid::{Grid, GridType, RMSE};
 
 #[cfg(feature = "moving-points-unipolar")]
-pub use moving_points_unipolar::move_points;
-#[cfg(feature = "moving-points-unipolar")]
-pub use moving_points_unipolar::CentralTendency;
+pub use moving_points_unipolar::{
+    concentric_circles, move_points, CentralTendency, MovePointsResult,
+};
 
 #[cfg(feature = "moving-points-multipolar")]
 pub use moving_points_multipolar::generate_positions_from_durations;

@@ -1,5 +1,5 @@
 use crate::errors::Error;
-use crate::utils::{distance, interpolate_line, median};
+use crate::utils::{buffer_around_point, distance, interpolate_line, median};
 use geo_types::Coord;
 
 /// The central tendency method to use to compute the reference speed
@@ -17,6 +17,8 @@ pub struct MovePointsResult {
     /// (can be useful to create concentric circles
     /// around the reference point).
     pub reference_speed: f64,
+    /// The reference point used for the movement.
+    pub reference_point: Coord,
 }
 
 /// Move the points (using a central tendency method such as the
@@ -103,5 +105,32 @@ pub fn move_points(
     // Add the reference point at the right index
     new_points.insert(idx, *ref_point);
 
-    Ok(MovePointsResult{points: new_points, reference_speed: ref_speed})
+    Ok(MovePointsResult {
+        points: new_points,
+        reference_point: *ref_point,
+        reference_speed: ref_speed,
+    })
+}
+
+/// Takes the result of the unipolar movement of the points and creates
+/// concentric circles (as LineStrings), at the given steps, around the
+/// reference point.
+///
+/// The steps are the durations at which the circles will be created
+/// (in the unit of the duration between the reference point and the
+/// other points).
+pub fn concentric_circles(
+    move_points_result: &MovePointsResult,
+    steps: Vec<f64>,
+) -> Vec<(geo_types::Geometry, f64)> {
+    let ref_point = move_points_result.reference_point;
+    let ref_speed = move_points_result.reference_speed;
+    let mut circles = Vec::with_capacity(steps.len());
+
+    for step in steps {
+        let circle = buffer_around_point(&ref_point, ref_speed * step, 100);
+        circles.push((geo_types::Geometry::from(circle), step));
+    }
+
+    circles
 }
