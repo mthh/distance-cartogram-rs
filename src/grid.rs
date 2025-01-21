@@ -90,7 +90,7 @@ impl Grid {
         let mut nodes = NodeSet::new(source_points, precision, bbox);
 
         for p in source_points {
-            nodes.set_weight_adjacent_nodes(p, 1.0);
+            nodes.increase_weight_adjacent_nodes(p);
         }
 
         let mut g = Grid {

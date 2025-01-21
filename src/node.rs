@@ -169,17 +169,17 @@ impl NodeSet {
         f(node);
     }
 
-    pub fn set_weight_adjacent_nodes(&mut self, point: &Coord, value: f64) {
+    pub fn increase_weight_adjacent_nodes(&mut self, point: &Coord) {
         let i = self.get_i(point);
         let j = self.get_j(point);
         let n1 = self.get_mut_node(i, j);
-        n1.weight += value;
+        n1.weight += 1.;
         let n2 = self.get_mut_node(i, j + 1);
-        n2.weight += value;
+        n2.weight += 1.;
         let n3 = self.get_mut_node(i + 1, j);
-        n3.weight += value;
+        n3.weight += 1.;
         let n4 = self.get_mut_node(i + 1, j + 1);
-        n4.weight += value;
+        n4.weight += 1.;
     }
 
     pub fn get_smoothed(&self, i: usize, j: usize, scale_x: f64, scale_y: f64) -> Coord {
