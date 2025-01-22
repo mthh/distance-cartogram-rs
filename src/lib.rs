@@ -4,7 +4,7 @@
 //! This method compares two surfaces described by homologous points whose positions correspond to
 //! the phenomenon being studied (such as positions in access time).
 //!
-//! For this purpose, the main feature exposed is the `Grid` struct, which is the main entry point
+//! For this purpose, the main feature exposed is the [`Grid`] struct, which is the main entry point
 //! to apply bidimensional regression to a set of homologous points (called *source points* and *image points*).
 //! This can then be used to interpolate any point within the grid (such as the background layers of a map)
 //! to create a distance cartogram.

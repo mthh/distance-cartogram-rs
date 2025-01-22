@@ -116,7 +116,7 @@ impl std::fmt::Debug for ProcrustesResult {
 /// as well as the transformation parameters.
 ///
 /// This is a naive version of the ordinary/classical Procrustes analysis (as described on
-/// https://en.wikipedia.org/wiki/Procrustes_analysis#Ordinary_Procrustes_analysis) that
+/// <https://en.wikipedia.org/wiki/Procrustes_analysis#Ordinary_Procrustes_analysis>) that
 /// deals with translation, rotation, scaling and reflection of the second set of points.
 pub fn procrustes(points1: &[Coord], points2: &[Coord]) -> Result<ProcrustesResult, Error> {
     if points1.len() != points2.len() {

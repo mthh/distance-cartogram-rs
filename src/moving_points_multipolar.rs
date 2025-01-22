@@ -8,7 +8,8 @@ use pcoa::{apply_pcoa, nalgebra::DMatrix};
 /// Note that the points are returned in the order of the input durations
 /// and are centered around (0, 0). The caller is responsible for
 /// translating/scaling/rotating the points as needed to fit them to
-/// the reference points (see [`adjustment`] or [`procrustes`] modules for this).
+/// the reference points (see [`adjustment`](crate::adjustment) or
+/// [`procrustes`](crate::procrustes) modules for this).
 pub fn generate_positions_from_durations(durations: Vec<Vec<f64>>) -> Result<Vec<Coord>, Error> {
     let m = durations.len();
     for item in durations.iter() {
