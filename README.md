@@ -11,6 +11,10 @@ All credit for the contribution of the method goes to **Colette Cauvin** *(Thém
 
 ### Usage
 
+_**From R**_:
+
+See the [**distanamo** R package](https://github.com/riatelab/distanamo) that wraps this library.
+
 _**From Rust**_:
 
 **Core feature**:
