@@ -125,7 +125,7 @@ pub(crate) fn buffer_around_point(pt: &Coord, distance: f64, num_segments: usize
 /// The function returns a tuple containing the matrix and the row names.
 ///
 /// An example of a valid CSV file for this function is:
-/// ```
+/// ```csv
 /// ,A,B,C
 /// A,0,1,2
 /// B,1,0,3
